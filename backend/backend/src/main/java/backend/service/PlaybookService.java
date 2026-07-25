@@ -29,6 +29,7 @@ public class PlaybookService {
         private final PlaybookAuditLogRepository playbookAuditLogRepository;
         private final PlaybookNotificationRepository playbookNotificationRepository;
         private final IncidentRepository incidentRepository;
+        private final AuditLogService auditLogService;
 
         private final ExecutorService executorService = Executors.newCachedThreadPool();
 
@@ -53,11 +54,29 @@ public class PlaybookService {
                                 "Scheduled scan failed to complete due to timeout. Manual intervention or re-triggering required.",
                                 "Medium", "Open", "Vulnerability Scanner");
 
+                seedIncident("Suspicious PowerShell Execution (Malware Suspect)",
+                                "Encoded PowerShell command executed by user 'developer_temp' on host WS-102. Action suggests potential malware downloader payload.",
+                                "High", "Open", "EDR Agent");
+
+                seedIncident("Unauthorized Database Access (Privilege Escalation Suspect)",
+                                "User account 'analyst_temp' attempted to run high-privilege queries on production database DB-PROD-01, triggering privilege escalation detection rules.",
+                                "Critical", "Open", "Active Directory");
+
+                seedIncident("Unauthorized Login Location Detected",
+                                "Detected successful user login for 'admin' from anomalous location (Moscow, RU - IP 185.220.101.5), violating geo-fencing policy.",
+                                "High", "Open", "GeoIP Security Guard");
+
                 // Seed playbooks & steps idempotently
                 seedBruteForcePlaybook();
-                seedMalwarePlaybook();
+                seedUnauthorizedLoginLocationPlaybook();
                 seedPrivEscPlaybook();
                 seedVulnScanPlaybook();
+
+                // Clean up any deprecated Malware Detection Response playbook if still in DB
+                playbookRepository.findByName("Malware Detection Response").ifPresent(pb -> {
+                        log.info("Cleaning up deprecated Malware Detection Response playbook from DB...");
+                        playbookRepository.delete(pb);
+                });
 
                 log.info("Playbook and incident seeding completed successfully.");
         }
@@ -77,14 +96,16 @@ public class PlaybookService {
         }
 
         private void seedBruteForcePlaybook() {
-                if (playbookRepository.findByName("Brute Force Response").isEmpty()) {
+                Playbook bruteForce = playbookRepository.findByName("Brute Force Response").orElse(null);
+                if (bruteForce == null) {
                         log.info("Seeding Brute Force Response playbook...");
-                        Playbook bruteForce = Playbook.builder()
+                        bruteForce = Playbook.builder()
                                         .name("Brute Force Response")
                                         .description("Triggered when multiple failed login attempts are detected. Automatically blocks malicious IP and locks targeted user account.")
                                         .triggerType("ALERT_TYPE")
                                         .triggerValue("Brute Force")
                                         .conditionsJson("{\"failedAttemptsThreshold\":5}")
+                                        .estimatedTime("10–15 minutes")
                                         .isActive(true)
                                         .build();
 
@@ -123,67 +144,129 @@ public class PlaybookService {
                                         .build();
 
                         playbookStepRepository.saveAll(List.of(bfStep1, bfStep2, bfStep3, bfStep4));
+                } else if (bruteForce.getEstimatedTime() == null) {
+                        bruteForce.setEstimatedTime("10–15 minutes");
+                        playbookRepository.save(bruteForce);
                 }
         }
 
-        private void seedMalwarePlaybook() {
-                if (playbookRepository.findByName("Malware Containment").isEmpty()) {
-                        log.info("Seeding Malware Containment playbook...");
-                        Playbook malware = Playbook.builder()
-                                        .name("Malware Containment")
-                                        .description("Isolates infected host systems from the internal network and disables suspicious user active sessions.")
-                                        .triggerType("ALERT_SEVERITY")
-                                        .triggerValue("Critical")
-                                        .conditionsJson("{\"alertName\":\"Malware Detected\"}")
+        private void seedUnauthorizedLoginLocationPlaybook() {
+                Playbook locationPb = playbookRepository.findByName("Unauthorized Login Location Detection").orElse(null);
+                
+                if (locationPb == null) {
+                        // Fall back to legacy Malware Detection & Containment playbooks to rename in place and preserve execution foreign keys
+                        locationPb = playbookRepository.findByName("Malware Detection & Containment")
+                                        .or(() -> playbookRepository.findByName("Malware Containment"))
+                                        .or(() -> playbookRepository.findByName("Malware Detection Response"))
+                                        .orElse(null);
+                        if (locationPb != null) {
+                                log.info("Updating legacy Malware playbook to Unauthorized Login Location Detection in place...");
+                                locationPb.setName("Unauthorized Login Location Detection");
+                                locationPb.setDescription("Standard procedure for responding to unauthorized login location and impossible travel incidents.");
+                                locationPb.setTriggerType("ALERT_TYPE");
+                                locationPb.setTriggerValue("Unauthorized Login Location");
+                                locationPb.setEstimatedTime("20–30 minutes");
+                                
+                                locationPb.getSteps().clear();
+                                locationPb = playbookRepository.saveAndFlush(locationPb);
+                        }
+                }
+
+                if (locationPb == null) {
+                        log.info("Seeding Unauthorized Login Location Detection playbook...");
+                        locationPb = Playbook.builder()
+                                        .name("Unauthorized Login Location Detection")
+                                        .description("Standard procedure for responding to unauthorized login location and impossible travel incidents.")
+                                        .triggerType("ALERT_TYPE")
+                                        .triggerValue("Unauthorized Login Location")
+                                        .estimatedTime("20–30 minutes")
                                         .isActive(true)
                                         .build();
 
-                        malware = playbookRepository.save(malware);
+                        locationPb = playbookRepository.save(locationPb);
+                }
 
-                        PlaybookStep mwStep1 = PlaybookStep.builder()
-                                        .playbook(malware)
+                if (locationPb.getSteps() == null || locationPb.getSteps().isEmpty()) {
+                        PlaybookStep locStep1 = PlaybookStep.builder()
+                                        .playbook(locationPb)
                                         .stepOrder(1)
-                                        .name("Quarantine Host Network Access")
-                                        .actionType("ISOLATE_HOST")
-                                        .parametersJson("{\"networkInterface\":\"eth0\",\"vlanId\":666}")
+                                        .name("Verify login alert and IP location details")
+                                        .actionType("MANUAL")
                                         .build();
 
-                        PlaybookStep mwStep2 = PlaybookStep.builder()
-                                        .playbook(malware)
+                        PlaybookStep locStep2 = PlaybookStep.builder()
+                                        .playbook(locationPb)
                                         .stepOrder(2)
-                                        .name("Disable User Active Sessions")
+                                        .name("Block suspicious IP address / Geo-location")
+                                        .actionType("BLOCK_IP")
+                                        .parametersJson("{\"firewallRule\":\"Deny\",\"durationMinutes\":1440}")
+                                        .build();
+
+                        PlaybookStep locStep3 = PlaybookStep.builder()
+                                        .playbook(locationPb)
+                                        .stepOrder(3)
+                                        .name("Disable compromised user account & revoke active sessions")
                                         .actionType("DISABLE_USER")
                                         .parametersJson("{\"revokeTokens\":true}")
                                         .build();
 
-                        PlaybookStep mwStep3 = PlaybookStep.builder()
-                                        .playbook(malware)
-                                        .stepOrder(3)
-                                        .name("Notify Incident Response Team")
-                                        .actionType("SEND_NOTIFICATION")
-                                        .parametersJson("{\"channel\":\"EMAIL\",\"recipient\":\"incident-response@sentinelcore.com\"}")
-                                        .build();
-
-                        PlaybookStep mwStep4 = PlaybookStep.builder()
-                                        .playbook(malware)
+                        PlaybookStep locStep4 = PlaybookStep.builder()
+                                        .playbook(locationPb)
                                         .stepOrder(4)
-                                        .name("Create Forensic Incident Ticket")
-                                        .actionType("CREATE_INCIDENT")
-                                        .parametersJson("{\"title\":\"Infected Host Contained\",\"severity\":\"Critical\"}")
+                                        .name("Notify SOC response team")
+                                        .actionType("SEND_NOTIFICATION")
+                                        .parametersJson("{\"channel\":\"SLACK\",\"recipient\":\"#soc-alerts\"}")
                                         .build();
 
-                        playbookStepRepository.saveAll(List.of(mwStep1, mwStep2, mwStep3, mwStep4));
+                        PlaybookStep locStep5 = PlaybookStep.builder()
+                                        .playbook(locationPb)
+                                        .stepOrder(5)
+                                        .name("Collect authentication logs & IP telemetry")
+                                        .actionType("MANUAL")
+                                        .build();
+
+                        PlaybookStep locStep6 = PlaybookStep.builder()
+                                        .playbook(locationPb)
+                                        .stepOrder(6)
+                                        .name("Force password reset & multi-factor auth re-enrollment")
+                                        .actionType("MANUAL")
+                                        .build();
+
+                        PlaybookStep locStep7 = PlaybookStep.builder()
+                                        .playbook(locationPb)
+                                        .stepOrder(7)
+                                        .name("Restore account access with restricted security policy")
+                                        .actionType("MANUAL")
+                                        .build();
+
+                        PlaybookStep locStep8 = PlaybookStep.builder()
+                                        .playbook(locationPb)
+                                        .stepOrder(8)
+                                        .name("Verify account & login activity health")
+                                        .actionType("MANUAL")
+                                        .build();
+
+                        PlaybookStep locStep9 = PlaybookStep.builder()
+                                        .playbook(locationPb)
+                                        .stepOrder(9)
+                                        .name("Update incident ticket")
+                                        .actionType("MANUAL")
+                                        .build();
+
+                        playbookStepRepository.saveAll(List.of(locStep1, locStep2, locStep3, locStep4, locStep5, locStep6, locStep7, locStep8, locStep9));
                 }
         }
 
         private void seedPrivEscPlaybook() {
-                if (playbookRepository.findByName("Privilege Escalation Detection").isEmpty()) {
+                Playbook privEsc = playbookRepository.findByName("Privilege Escalation Detection").orElse(null);
+                if (privEsc == null) {
                         log.info("Seeding Privilege Escalation Detection playbook...");
-                        Playbook privEsc = Playbook.builder()
+                        privEsc = Playbook.builder()
                                         .name("Privilege Escalation Detection")
                                         .description("Fires when an unauthorized permission elevation is caught. Deactivates credentials immediately.")
                                         .triggerType("THREAT_DETECTED")
                                         .triggerValue("Privilege Escalation")
+                                        .estimatedTime("15–20 minutes")
                                         .isActive(true)
                                         .build();
 
@@ -214,16 +297,21 @@ public class PlaybookService {
                                         .build();
 
                         playbookStepRepository.saveAll(List.of(peStep1, peStep2, peStep3));
+                } else if (privEsc.getEstimatedTime() == null) {
+                        privEsc.setEstimatedTime("15–20 minutes");
+                        playbookRepository.save(privEsc);
                 }
         }
 
         private void seedVulnScanPlaybook() {
-                if (playbookRepository.findByName("Vulnerability Scan Automation").isEmpty()) {
+                Playbook vulnScan = playbookRepository.findByName("Vulnerability Scan Automation").orElse(null);
+                if (vulnScan == null) {
                         log.info("Seeding Vulnerability Scan Automation playbook...");
-                        Playbook vulnScan = Playbook.builder()
+                        vulnScan = Playbook.builder()
                                         .name("Vulnerability Scan Automation")
                                         .description("Triggers a dynamic vulnerability scan on the network subnet and generates remediation tickets.")
                                         .triggerType("MANUAL")
+                                        .estimatedTime("60–90 minutes")
                                         .isActive(true)
                                         .build();
 
@@ -254,9 +342,10 @@ public class PlaybookService {
                                         .build();
 
                         playbookStepRepository.saveAll(List.of(vsStep1, vsStep2, vsStep3));
+                } else if (vulnScan.getEstimatedTime() == null) {
+                        vulnScan.setEstimatedTime("60–90 minutes");
+                        playbookRepository.save(vulnScan);
                 }
-
-                log.info("Playbook seeding completed successfully.");
         }
 
         // ================= Config CRUD Operations =================
@@ -283,6 +372,7 @@ public class PlaybookService {
                                 .triggerValue(dto.getTriggerValue())
                                 .conditionsJson(dto.getConditionsJson())
                                 .isActive(dto.getIsActive() != null ? dto.getIsActive() : true)
+                                .estimatedTime(dto.getEstimatedTime())
                                 .build();
 
                 Playbook savedPlaybook = playbookRepository.save(playbook);
@@ -318,6 +408,7 @@ public class PlaybookService {
                 playbook.setTriggerType(dto.getTriggerType());
                 playbook.setTriggerValue(dto.getTriggerValue());
                 playbook.setConditionsJson(dto.getConditionsJson());
+                playbook.setEstimatedTime(dto.getEstimatedTime());
                 if (dto.getIsActive() != null) {
                         playbook.setIsActive(dto.getIsActive());
                 }
@@ -376,6 +467,10 @@ public class PlaybookService {
         // ================= Playbook Execution Engine =================
 
         public PlaybookExecutionDto triggerPlaybook(Long playbookId, Long incidentId, User triggeredBy) {
+                return triggerPlaybook(playbookId, incidentId, triggeredBy, false);
+        }
+
+        public PlaybookExecutionDto triggerPlaybook(Long playbookId, Long incidentId, User triggeredBy, boolean runAsync) {
                 Playbook playbook = playbookRepository.findById(playbookId)
                                 .orElseThrow(() -> new RuntimeException("Playbook not found with id: " + playbookId));
 
@@ -411,12 +506,189 @@ public class PlaybookService {
 
                 execution = playbookExecutionRepository.save(execution);
 
-                // Run asynchronously
-                runAsyncExecution(execution.getId());
+                if (runAsync) {
+                        runAsyncExecution(execution.getId());
+                } else {
+                        writeExecutionLog(execution, "System", "PENDING", "INFO",
+                                        "Playbook execution queued and ready for interactive response.");
+                }
 
                 // Audit Log
                 saveAuditLog("TRIGGER_PLAYBOOK", execution.getId(),
                                 "Triggered playbook: " + playbook.getName() + " on incident ID: " + incidentId);
+
+                return convertToExecutionDto(execution);
+        }
+
+        @Transactional
+        public PlaybookExecutionDto startExecution(Long executionId, User user) {
+                PlaybookExecution execution = playbookExecutionRepository.findById(executionId)
+                                .orElseThrow(() -> new RuntimeException("Execution not found: " + executionId));
+
+                if (!"PENDING".equalsIgnoreCase(execution.getStatus())) {
+                        throw new RuntimeException("Execution already started");
+                }
+
+                execution.setStatus("RUNNING");
+                execution.setStartedAt(LocalDateTime.now());
+                execution.setTriggeredBy(user);
+                execution = playbookExecutionRepository.save(execution);
+
+                // Log in execution log
+                writeExecutionLog(execution, "System", "RUNNING", "INFO", "Playbook response sequence initiated by " + (user != null ? user.getName() : "System") + ".");
+
+                // If incident is associated, transition status to Investigating
+                if (execution.getIncidentId() != null) {
+                        Incident incident = incidentRepository.findById(execution.getIncidentId()).orElse(null);
+                        if (incident != null) {
+                                String oldStatus = incident.getStatus();
+                                incident.setStatus("Investigating");
+                                incidentRepository.save(incident);
+
+                                // Write incident audit log
+                                auditLogService.createLog("PLAYBOOK_STARTED", 
+                                                "Playbook " + execution.getPlaybookName() + " started. Incident status updated from " + oldStatus + " to Investigating.",
+                                                user, incident);
+                        }
+                }
+
+                saveAuditLog("START_PLAYBOOK", executionId, "Started playbook execution: " + execution.getPlaybookName());
+
+                return convertToExecutionDto(execution);
+        }
+
+        @Transactional
+        public PlaybookExecutionDto executeStep(Long executionId, Integer stepOrder, User user) {
+                PlaybookExecution execution = playbookExecutionRepository.findById(executionId)
+                                .orElseThrow(() -> new RuntimeException("Execution not found: " + executionId));
+
+                if (!"RUNNING".equalsIgnoreCase(execution.getStatus())) {
+                        throw new RuntimeException("Playbook execution is not in RUNNING state.");
+                }
+
+                List<PlaybookStep> steps = execution.getPlaybook().getSteps();
+                if (stepOrder < 1 || stepOrder > steps.size()) {
+                        throw new RuntimeException("Invalid step sequence: " + stepOrder);
+                }
+
+                PlaybookStep step = steps.get(stepOrder - 1);
+                execution.setCurrentStep(step.getName());
+                execution.setCurrentStepIndex(stepOrder);
+                
+                int progress = (int) (((double) stepOrder / steps.size()) * 100);
+                execution.setProgress(progress);
+                playbookExecutionRepository.save(execution);
+
+                // Write execution log
+                writeExecutionLog(execution, step.getName(), "RUNNING", "INFO", "Executing Action: " + step.getActionType());
+
+                Incident incident = null;
+                if (execution.getIncidentId() != null) {
+                        incident = incidentRepository.findById(execution.getIncidentId()).orElse(null);
+                }
+
+                // Execute action
+                String actionStr = step.getActionType();
+                try {
+                        performAction(execution, step);
+                        writeExecutionLog(execution, step.getName(), "SUCCESS", "INFO", "Action successfully finished.");
+                        
+                        // Map step to incident audit logs & status transitions
+                        if (incident != null) {
+                                String details = "Playbook step '" + step.getName() + "' executed successfully.";
+                                String actionKey = "PLAYBOOK_STEP";
+                                
+                                if ("ISOLATE_HOST".equalsIgnoreCase(actionStr)) {
+                                        actionKey = "HOST_ISOLATED";
+                                        details = "Endpoint host isolated from internal network connection.";
+                                        
+                                        String oldStatus = incident.getStatus();
+                                        incident.setStatus("Contained");
+                                        incidentRepository.save(incident);
+                                        writeExecutionLog(execution, "System", "RUNNING", "INFO", "Associated incident status transitioned from " + oldStatus + " to 'Contained'.");
+                                } else if ("DISABLE_USER".equalsIgnoreCase(actionStr)) {
+                                        actionKey = "USER_DISABLED";
+                                        details = "Compromised user credentials and active directory token revoked.";
+                                        
+                                        String oldStatus = incident.getStatus();
+                                        incident.setStatus("Contained");
+                                        incidentRepository.save(incident);
+                                        writeExecutionLog(execution, "System", "RUNNING", "INFO", "Associated incident status transitioned from " + oldStatus + " to 'Contained'.");
+                                } else if ("BLOCK_IP".equalsIgnoreCase(actionStr)) {
+                                        actionKey = "IP_BLOCKED";
+                                        details = "Attacking source IP block injected to PaloAlto Firewall rule.";
+                                        
+                                        String oldStatus = incident.getStatus();
+                                        incident.setStatus("Contained");
+                                        incidentRepository.save(incident);
+                                        writeExecutionLog(execution, "System", "RUNNING", "INFO", "Associated incident status transitioned from " + oldStatus + " to 'Contained'.");
+                                } else if ("SEND_NOTIFICATION".equalsIgnoreCase(actionStr)) {
+                                        actionKey = "NOTIFICATION_SENT";
+                                        details = "Incident response alert notification sent to SOC Channel.";
+                                } else if ("SCAN_VULNERABILITY".equalsIgnoreCase(actionStr)) {
+                                        actionKey = "VULNERABILITY_SCAN";
+                                        details = "Quarantined subnet scanned for local vulnerabilities.";
+                                } else {
+                                        // Custom mapping based on name
+                                        String nameLower = step.getName().toLowerCase();
+                                        if (nameLower.contains("remove") || nameLower.contains("malware") || nameLower.contains("clean")) {
+                                                actionKey = "MALWARE_REMOVED";
+                                                details = "Malware containment cleanup executed. Malicious file hashes quarantined.";
+                                                
+                                                String oldStatus = incident.getStatus();
+                                                incident.setStatus("Recovery");
+                                                incidentRepository.save(incident);
+                                                writeExecutionLog(execution, "System", "RUNNING", "INFO", "Associated incident status transitioned from " + oldStatus + " to 'Recovery'.");
+                                        } else if (nameLower.contains("restore") || nameLower.contains("recover")) {
+                                                actionKey = "SYSTEM_RESTORED";
+                                                details = "System restored from clean backups.";
+                                                
+                                                String oldStatus = incident.getStatus();
+                                                incident.setStatus("Recovery");
+                                                incidentRepository.save(incident);
+                                                writeExecutionLog(execution, "System", "RUNNING", "INFO", "Associated incident status transitioned from " + oldStatus + " to 'Recovery'.");
+                                        } else if (nameLower.contains("verify") || nameLower.contains("health")) {
+                                                actionKey = "SYSTEM_VERIFIED";
+                                                details = "System verified health status is clean and normal.";
+                                        } else if (nameLower.contains("soc") || nameLower.contains("alert")) {
+                                                actionKey = "SOC_NOTIFIED";
+                                                details = "Incident response alert notification sent to SOC Channel.";
+                                        } else if (nameLower.contains("incident") || nameLower.contains("ticket")) {
+                                                actionKey = "INCIDENT_UPDATED";
+                                                details = "Associated incident ticket log audit update.";
+                                        }
+                                }
+
+                                auditLogService.createLog(actionKey, details, user, incident);
+                        }
+                } catch (Exception e) {
+                        writeExecutionLog(execution, step.getName(), "FAILED", "ERROR", "Action failed: " + e.getMessage());
+                        execution.setStatus("FAILED");
+                        execution.setEndedAt(LocalDateTime.now());
+                        playbookExecutionRepository.save(execution);
+                        
+                        if (incident != null) {
+                                auditLogService.createLog("PLAYBOOK_FAILED", "Playbook step '" + step.getName() + "' failed: " + e.getMessage(), user, incident);
+                        }
+                        
+                        throw new RuntimeException("Failed to execute step action: " + e.getMessage());
+                }
+
+                // If this is the last step, mark execution SUCCESS
+                if (stepOrder == steps.size()) {
+                        execution.setStatus("SUCCESS");
+                        execution.setCurrentStep("Execution Completed");
+                        execution.setEndedAt(LocalDateTime.now());
+                        playbookExecutionRepository.save(execution);
+
+                        writeExecutionLog(execution, "System", "SUCCESS", "INFO", "Playbook finished execution with status SUCCESS.");
+
+                        if (incident != null) {
+                                auditLogService.createLog("PLAYBOOK_COMPLETED", "Playbook " + execution.getPlaybookName() + " completed execution successfully.", user, incident);
+                        }
+                }
+
+                saveAuditLog("STEP_EXECUTE", execution.getId(), "Executed step " + stepOrder + " (" + step.getName() + ") of playbook " + execution.getPlaybookName());
 
                 return convertToExecutionDto(execution);
         }
@@ -693,6 +965,7 @@ public class PlaybookService {
                                 .triggerValue(playbook.getTriggerValue())
                                 .conditionsJson(playbook.getConditionsJson())
                                 .isActive(playbook.getIsActive())
+                                .estimatedTime(playbook.getEstimatedTime())
                                 .steps(steps)
                                 .createdAt(playbook.getCreatedAt())
                                 .updatedAt(playbook.getUpdatedAt())
@@ -723,12 +996,13 @@ public class PlaybookService {
         // updateStatus methods.
         @Transactional
         public PlaybookStatusResponse runPlaybook(Long incidentId) {
-                // Run default Malware containment playbook
-                Playbook malware = playbookRepository.findByName("Malware Containment")
+                // Run default Unauthorized Login Location Detection playbook
+                Playbook locationPb = playbookRepository.findByName("Unauthorized Login Location Detection")
+                                .or(() -> playbookRepository.findAll().stream().filter(Playbook::getIsActive).findFirst())
                                 .orElseThrow(() -> new RuntimeException(
-                                                "Default Malware Containment playbook not seeded"));
+                                                "Default response playbook not seeded"));
 
-                PlaybookExecutionDto dto = triggerPlaybook(malware.getId(), incidentId, null);
+                PlaybookExecutionDto dto = triggerPlaybook(locationPb.getId(), incidentId, null, true);
                 return new PlaybookStatusResponse(
                                 dto.getIncidentId(),
                                 dto.getStatus(),
@@ -859,25 +1133,25 @@ public class PlaybookService {
 
                 boolean isVulnIncident = incWords.stream().anyMatch(w -> wordsMatchFuzzy("vulnerability", w)) 
                                 || incWords.stream().anyMatch(w -> wordsMatchFuzzy("scan", w));
-                boolean isMalwareIncident = incWords.stream().anyMatch(w -> wordsMatchFuzzy("malware", w));
+                boolean isLocationIncident = incWords.stream().anyMatch(w -> wordsMatchFuzzy("location", w) || wordsMatchFuzzy("login", w) || wordsMatchFuzzy("unauthorized", w) || wordsMatchFuzzy("geoip", w));
                 boolean isBruteForceIncident = incWords.stream().anyMatch(w -> wordsMatchFuzzy("brute", w));
                 boolean isPrivEscIncident = incWords.stream().anyMatch(w -> wordsMatchFuzzy("privilege", w));
 
                 boolean isVulnPlaybook = pbName.contains("vulnerability") || pbName.contains("scan");
-                boolean isMalwarePlaybook = pbName.contains("malware");
+                boolean isLocationPlaybook = pbName.contains("location") || pbName.contains("unauthorized") || pbName.contains("login");
                 boolean isBruteForcePlaybook = pbName.contains("brute");
                 boolean isPrivEscPlaybook = pbName.contains("privilege");
 
                 // Recommended matching
-                if (isMalwareIncident && isMalwarePlaybook) return "RECOMMENDED";
+                if (isLocationIncident && isLocationPlaybook) return "RECOMMENDED";
                 if (isBruteForceIncident && isBruteForcePlaybook) return "RECOMMENDED";
                 if (isPrivEscIncident && isPrivEscPlaybook) return "RECOMMENDED";
-                if (isVulnIncident && isVulnPlaybook && !isMalwareIncident && !isBruteForceIncident && !isPrivEscIncident) {
+                if (isVulnIncident && isVulnPlaybook && !isLocationIncident && !isBruteForceIncident && !isPrivEscIncident) {
                         return "RECOMMENDED";
                 }
 
-                // Secondary matching (Vulnerability scan is secondary for Malware, Brute Force, and Privilege Escalation)
-                if (isVulnPlaybook && (isMalwareIncident || isBruteForceIncident || isPrivEscIncident)) {
+                // Secondary matching (Vulnerability scan is secondary for Location, Brute Force, and Privilege Escalation)
+                if (isVulnPlaybook && (isLocationIncident || isBruteForceIncident || isPrivEscIncident)) {
                         return "SECONDARY";
                 }
 

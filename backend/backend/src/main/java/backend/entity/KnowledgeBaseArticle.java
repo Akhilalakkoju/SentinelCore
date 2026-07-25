@@ -3,18 +3,18 @@ package backend.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
 @Entity
-@Table(name = "incidents")
+@Table(name = "kb_articles")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-public class Incident {
+public class KnowledgeBaseArticle {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -24,28 +24,19 @@ public class Incident {
     @Column(nullable = false)
     private String title;
 
-    @Column(columnDefinition = "TEXT")
-    private String description;
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String content;
 
     @Column(nullable = false)
-    private String severity; // Low, Medium, High, Critical
+    private String type; // RUNBOOK, POST_INCIDENT_REVIEW, DETECTION_RULE
 
     @Column(nullable = false)
-    private String status; // Open, Investigating, Resolved, Closed
-
-    @Column(nullable = false)
-    private String source;
-
-    private String priority; // P1, P2, P3, P4
-
     @Builder.Default
-    private Boolean escalated = false;
-
-    private LocalDateTime slaDeadline;
+    private Integer version = 1;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "assigned_to_id")
-    private User assignedTo;
+    @JoinColumn(name = "created_by_id")
+    private User createdBy;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -53,21 +44,16 @@ public class Incident {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-        name = "incident_kb_articles",
-        joinColumns = @JoinColumn(name = "incident_id"),
-        inverseJoinColumns = @JoinColumn(name = "kb_article_id")
-    )
+    @ManyToMany(mappedBy = "kbArticles", fetch = FetchType.LAZY)
     @Builder.Default
-    private List<KnowledgeBaseArticle> kbArticles = new ArrayList<>();
+    private List<Incident> linkedIncidents = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        if (escalated == null) {
-            escalated = false;
+        if (version == null) {
+            version = 1;
         }
     }
 

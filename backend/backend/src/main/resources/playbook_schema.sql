@@ -9,6 +9,9 @@ CREATE TABLE IF NOT EXISTS incidents (
     status VARCHAR(50) NOT NULL CHECK (status IN ('Open', 'Investigating', 'Resolved', 'Closed')),
     source VARCHAR(100) NOT NULL,
     assigned_to_id BIGINT,
+    priority VARCHAR(50),
+    escalated BOOLEAN DEFAULT FALSE,
+    sla_deadline TIMESTAMP,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_incidents_assigned_to FOREIGN KEY (assigned_to_id) REFERENCES users(id) ON DELETE SET NULL
@@ -111,3 +114,43 @@ CREATE INDEX IF NOT EXISTS idx_playbook_steps_playbook_id ON playbook_steps(play
 CREATE INDEX IF NOT EXISTS idx_playbook_executions_playbook_id ON playbook_executions(playbook_id);
 CREATE INDEX IF NOT EXISTS idx_playbook_executions_incident_id ON playbook_executions(incident_id);
 CREATE INDEX IF NOT EXISTS idx_playbook_execution_logs_execution_id ON playbook_execution_logs(execution_id);
+
+-- 8. Knowledge Base Articles Table
+CREATE TABLE IF NOT EXISTS kb_articles (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    type VARCHAR(50) NOT NULL CHECK (type IN ('RUNBOOK', 'POST_INCIDENT_REVIEW', 'DETECTION_RULE')),
+    version INT NOT NULL DEFAULT 1,
+    created_by_id BIGINT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_kb_articles_created_by FOREIGN KEY (created_by_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- 9. Knowledge Base Article Revisions Table
+CREATE TABLE IF NOT EXISTS kb_article_revisions (
+    id BIGSERIAL PRIMARY KEY,
+    article_id BIGINT NOT NULL,
+    version INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    updated_by_id BIGINT,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_kb_revisions_article FOREIGN KEY (article_id) REFERENCES kb_articles(id) ON DELETE CASCADE,
+    CONSTRAINT fk_kb_revisions_updated_by FOREIGN KEY (updated_by_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- 10. Incident - KB Articles Join Table
+CREATE TABLE IF NOT EXISTS incident_kb_articles (
+    incident_id BIGINT NOT NULL,
+    kb_article_id BIGINT NOT NULL,
+    PRIMARY KEY (incident_id, kb_article_id),
+    CONSTRAINT fk_incident_kb_incident FOREIGN KEY (incident_id) REFERENCES incidents(id) ON DELETE CASCADE,
+    CONSTRAINT fk_incident_kb_article FOREIGN KEY (kb_article_id) REFERENCES kb_articles(id) ON DELETE CASCADE
+);
+
+-- KB Optimization Indexes
+CREATE INDEX IF NOT EXISTS idx_kb_article_revisions_article_id ON kb_article_revisions(article_id);
+CREATE INDEX IF NOT EXISTS idx_incident_kb_articles_incident_id ON incident_kb_articles(incident_id);
+

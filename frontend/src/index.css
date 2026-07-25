@@ -10,3 +10,8 @@
   -ms-overflow-style: none !important;  /* IE and Edge */
   scrollbar-width: none !important;  /* Firefox */
 }
+
+/* Enforce cursor pointer for all clickable elements globally */
+a, button, select, input[type="submit"], input[type="button"], input[type="checkbox"], input[type="radio"], [role="button"], .cursor-pointer {
+  cursor: pointer !important;
+}

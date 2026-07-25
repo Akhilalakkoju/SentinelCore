@@ -25,6 +25,9 @@ public class AuthService {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
+    private AuditLogService auditLogService;
+
+    @Autowired
     private JwtUtil jwtUtil;
 
     @Autowired
@@ -50,6 +53,8 @@ public class AuthService {
         );
 
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getEmail());
+
+        auditLogService.createLog("LOGIN", "User " + user.getEmail() + " logged in successfully", user, null);
 
         return new JwtResponse(
                 token,
@@ -82,7 +87,9 @@ public class AuthService {
         user.setRole(role);
         user.setEnabled(true);
 
-        userRepository.save(user);
+        User saved = userRepository.save(user);
+
+        auditLogService.createLog("REGISTER", "New analyst account created: " + saved.getEmail(), saved, null);
 
         return "Registration Successful";
     }

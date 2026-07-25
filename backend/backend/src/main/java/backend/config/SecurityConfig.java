@@ -70,14 +70,14 @@ public class SecurityConfig {
                         // Dashboard
                         // ===========================
                         .requestMatchers("/api/dashboard/**")
-                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER")
+                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER", "MANAGER")
 
                         // ===========================
                         // Threat APIs
                         // ===========================
                         .requestMatchers(HttpMethod.GET,
                                 "/api/threats/**")
-                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER")
+                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER", "MANAGER")
 
                         .requestMatchers(HttpMethod.POST,
                                 "/api/threats/**")
@@ -96,7 +96,7 @@ public class SecurityConfig {
                         // ===========================
                         .requestMatchers(HttpMethod.GET,
                                 "/api/ioc/**")
-                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER")
+                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER", "MANAGER")
 
                         .requestMatchers(HttpMethod.POST,
                                 "/api/ioc/**")
@@ -115,7 +115,7 @@ public class SecurityConfig {
                         // ===========================
                         .requestMatchers(HttpMethod.GET,
                                 "/api/alerts/**")
-                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER")
+                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER", "MANAGER")
 
                         .requestMatchers(HttpMethod.POST,
                                 "/api/alerts/**")
@@ -134,21 +134,51 @@ public class SecurityConfig {
                         // ===========================
                         .requestMatchers(HttpMethod.GET,
                                 "/api/notifications/**")
-                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER")
+                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER", "MANAGER")
 
                         .requestMatchers(HttpMethod.PUT,
                                 "/api/notifications/**")
-                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER")
+                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER", "MANAGER")
 
                         .requestMatchers(HttpMethod.DELETE,
                                 "/api/notifications/**")
                         .hasRole("ADMIN")
 
                         // ===========================
+                        // Knowledge Base
+                        // ===========================
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/kb/**")
+                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER", "MANAGER")
+
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/kb/**")
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.PUT,
+                                "/api/kb/**")
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.DELETE,
+                                "/api/kb/**")
+                        .hasRole("ADMIN")
+
+                        // ===========================
+                        // Incident KB Articles Mapping
+                        // ===========================
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/incidents/*/kb-articles/*")
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.DELETE,
+                                "/api/incidents/*/kb-articles/*")
+                        .hasRole("ADMIN")
+
+                        // ===========================
                         // Reports
                         // ===========================
                         .requestMatchers("/api/reports/**")
-                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER")
+                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER", "MANAGER")
 
                         // ===========================
                         // Allow OPTIONS

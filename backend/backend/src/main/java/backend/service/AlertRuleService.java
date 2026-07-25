@@ -1,8 +1,12 @@
 package backend.service;
 
 import backend.entity.AlertRule;
+import backend.entity.User;
 import backend.repository.AlertRuleRepository;
+import backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -14,6 +18,21 @@ public class AlertRuleService {
 
     @Autowired
     private AlertRuleRepository alertRuleRepository;
+
+    @Autowired
+    private AuditLogService auditLogService;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    private User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+        String email = authentication.getName();
+        return userRepository.findByEmail(email).orElse(null);
+    }
 
     // Get all rules
     public List<AlertRule> getAllRules() {
@@ -27,7 +46,9 @@ public class AlertRuleService {
 
     // Create new rule
     public AlertRule createRule(AlertRule alertRule) {
-        return alertRuleRepository.save(alertRule);
+        AlertRule saved = alertRuleRepository.save(alertRule);
+        auditLogService.createLog("CREATE_ALERT_RULE", "New alert rule created: " + saved.getName(), getCurrentUser(), null);
+        return saved;
     }
 
     // Update existing rule
@@ -43,11 +64,17 @@ public class AlertRuleService {
         existingRule.setSeverity(updatedRule.getSeverity());
         existingRule.setEnabled(updatedRule.getEnabled());
 
-        return alertRuleRepository.save(existingRule);
+        AlertRule saved = alertRuleRepository.save(existingRule);
+        auditLogService.createLog("UPDATE_ALERT_RULE", "Alert rule updated: " + saved.getName() + " (Enabled: " + saved.getEnabled() + ")", getCurrentUser(), null);
+        return saved;
     }
 
     // Delete rule
     public void deleteRule(Long id) {
-        alertRuleRepository.deleteById(id);
+        AlertRule rule = alertRuleRepository.findById(id).orElse(null);
+        if (rule != null) {
+            alertRuleRepository.delete(rule);
+            auditLogService.createLog("DELETE_ALERT_RULE", "Alert rule deleted: " + rule.getName(), getCurrentUser(), null);
+        }
     }
-}
+}

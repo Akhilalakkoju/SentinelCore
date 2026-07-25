@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -37,4 +38,5 @@ public class IncidentDto {
     private LocalDateTime slaDeadline;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private List<KnowledgeBaseArticleSummaryDto> linkedArticles;
 }

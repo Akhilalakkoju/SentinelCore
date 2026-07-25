@@ -33,6 +33,7 @@ import ReportsModule from "../modules/reports/ReportsModule";
 import VulnerabilityDashboard from "../pages/VulnerabilityDashboard";
 
 import IncidentList from "../pages/IncidentList";
+import KnowledgeBase from "../pages/KnowledgeBase";
 
 import PlaybookList from "../pages/PlaybookList";
 import PlaybookExecutionDetail from "../pages/PlaybookExecutionDetail";
@@ -185,6 +186,13 @@ function AppRoutes() {
                 <Route
                     path="/incidents"
                     element={protect(<IncidentList />)}
+                />
+
+                {/* Knowledge Base */}
+
+                <Route
+                    path="/knowledge-base"
+                    element={protect(<KnowledgeBase />)}
                 />
 
                 {/* Playbook Automation */}

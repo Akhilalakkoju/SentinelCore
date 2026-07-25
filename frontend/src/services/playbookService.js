@@ -67,6 +67,18 @@ const playbookService = {
     const response = await api.get(`/playbooks/executions/${executionId}/logs`);
     return response.data;
   },
+
+  // Start playbook execution interactively
+  startExecution: async (executionId) => {
+    const response = await api.post(`/playbooks/executions/${executionId}/start`);
+    return response.data;
+  },
+
+  // Execute or complete step of execution interactively
+  executeStep: async (executionId, stepOrder) => {
+    const response = await api.post(`/playbooks/executions/${executionId}/steps/${stepOrder}/execute`);
+    return response.data;
+  },
 };
 
 export default playbookService;

@@ -4,6 +4,8 @@ import ReportDashboard from "./components/ReportDashboard";
 import ReportForm from "./components/ReportForm";
 import ReportHistory from "./components/ReportHistory";
 import reportService from "./services/reportService";
+import Navbar from "../../components/Navbar";
+import Sidebar from "../../components/Sidebar";
 
 function ReportsModule() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -32,7 +34,10 @@ function ReportsModule() {
   };
 
   return (
-    <div className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-[#081225] font-sans antialiased text-white select-none">
+    <>
+      <Navbar />
+      <Sidebar />
+      <main className="ml-64 mt-16 relative min-h-[calc(100vh-4rem)] overflow-hidden bg-[#081225] font-sans antialiased text-white select-none">
       
       {/* Premium Background Grid & Glows */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#081225] to-[#050B18] pointer-events-none z-0" />
@@ -115,7 +120,8 @@ function ReportsModule() {
 
       </div>
 
-    </div>
+    </main>
+    </>
   );
 }
 

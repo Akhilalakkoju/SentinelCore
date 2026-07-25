@@ -8,9 +8,10 @@ import java.util.Optional;
 
 @Repository
 public interface IncidentRepository extends JpaRepository<Incident, Long> {
-    List<Incident> findAllByOrderByIdDesc();
+    List<Incident> findAllByOrderByEscalatedDescIdDesc();
     long countByStatus(String status);
     long countBySeverity(String severity);
     Optional<Incident> findByTitle(String title);
+    List<Incident> findByAssignedToId(Long userId);
 }
 

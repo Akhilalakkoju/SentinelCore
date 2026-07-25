@@ -61,7 +61,21 @@ public class PlaybookController {
     public PlaybookExecutionDto triggerPlaybook(@Valid @RequestBody PlaybookTriggerRequest request) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByEmail(email).orElse(null);
-        return playbookService.triggerPlaybook(request.getPlaybookId(), request.getIncidentId(), user);
+        return playbookService.triggerPlaybook(request.getPlaybookId(), request.getIncidentId(), user, false);
+    }
+
+    @PostMapping("/executions/{id}/start")
+    public PlaybookExecutionDto startExecution(@PathVariable Long id) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email).orElse(null);
+        return playbookService.startExecution(id, user);
+    }
+
+    @PostMapping("/executions/{id}/steps/{stepOrder}/execute")
+    public PlaybookExecutionDto executeStep(@PathVariable Long id, @PathVariable Integer stepOrder) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email).orElse(null);
+        return playbookService.executeStep(id, stepOrder, user);
     }
 
     @GetMapping("/executions")

@@ -46,6 +46,18 @@ const incidentService = {
     const response = await api.put(`/incidents/${id}/resolve`);
     return response.data;
   },
+
+  // Link KB Article to Incident
+  linkKbArticle: async (incidentId, articleId) => {
+    const response = await api.post(`/incidents/${incidentId}/kb-articles/${articleId}`);
+    return response.data;
+  },
+
+  // Unlink KB Article from Incident
+  unlinkKbArticle: async (incidentId, articleId) => {
+    const response = await api.delete(`/incidents/${incidentId}/kb-articles/${articleId}`);
+    return response.data;
+  },
 };
 
 export default incidentService;

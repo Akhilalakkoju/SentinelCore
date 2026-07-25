@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { FaHistory, FaUserShield, FaClock } from "react-icons/fa";
+import { FaHistory, FaUserShield, FaClock, FaUndo } from "react-icons/fa";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import AnimatedBackground from "../components/AnimatedBackground";
@@ -44,6 +44,13 @@ function AuditLogs() {
   const [incidents, setIncidents] = useState([]);
   const [selectedIncidentId, setSelectedIncidentId] = useState("");
   const [selectedLog, setSelectedLog] = useState(null);
+
+  // New filtering states
+  const [searchUser, setSearchUser] = useState("");
+  const [filterAction, setFilterAction] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   useEffect(() => {
     const fetchIncidents = async () => {
@@ -99,9 +106,107 @@ function AuditLogs() {
     };
   }, []);
 
-  const filteredLogs = selectedIncidentId
-    ? logs.filter((log) => log.incident?.id === Number(selectedIncidentId))
-    : logs;
+  const filteredLogs = logs.filter((log) => {
+    // Incident filter
+    if (selectedIncidentId && log.incident?.id !== Number(selectedIncidentId)) {
+      return false;
+    }
+
+    // User search filter
+    if (searchUser) {
+      const uName = String(log.user?.name || "").toLowerCase();
+      const uEmail = String(log.user?.email || "").toLowerCase();
+      const uUser = String(log.user?.username || "").toLowerCase();
+      const sTerm = searchUser.toLowerCase();
+      if (!uName.includes(sTerm) && !uEmail.includes(sTerm) && !uUser.includes(sTerm)) {
+        if (sTerm === "system" && log.user === null) {
+          // Match System
+        } else {
+          return false;
+        }
+      }
+    }
+
+    // Action filter
+    if (filterAction) {
+      const act = String(log.action || "").toUpperCase();
+      if (filterAction === "CREATE" && !act.includes("CREATE")) return false;
+      if (filterAction === "UPDATE" && !act.includes("UPDATE")) return false;
+      if (filterAction === "DELETE" && !act.includes("DELETE")) return false;
+      if (filterAction === "LOGIN" && act !== "LOGIN") return false;
+      if (filterAction === "REGISTER" && act !== "REGISTER") return false;
+      if (filterAction === "ROLE_CHANGED" && act !== "ROLE_CHANGED") return false;
+      if (filterAction === "PLAYBOOK_STARTED" && act !== "PLAYBOOK_STARTED") return false;
+      if (filterAction === "PLAYBOOK_COMPLETED" && act !== "PLAYBOOK_COMPLETED") return false;
+      if (filterAction === "HOST_ISOLATED" && act !== "HOST_ISOLATED") return false;
+      if (filterAction === "USER_DISABLED" && act !== "USER_DISABLED") return false;
+    }
+
+    // Category / Resource filter
+    if (filterCategory) {
+      const act = String(log.action || "").toUpperCase();
+      const desc = String(log.description || "").toUpperCase();
+
+      if (filterCategory === "Incident") {
+        const isIncident = log.incident !== null || act.includes("INCIDENT") || act.includes("CREATE") || act.includes("UPDATE") || act.includes("DELETE");
+        const isOther = act.includes("USER") || act.includes("VULNERABILITY") || act.includes("ROLE") || act === "LOGIN" || act === "REGISTER" || act.includes("ALERT") || act.includes("THREAT") || act.includes("IOC") || act.includes("REPORT");
+        if (!isIncident || isOther) return false;
+      }
+      if (filterCategory === "Playbook") {
+        const isPlaybook = act.includes("PLAYBOOK") || act.includes("ISOLATED") || act.includes("DISABLED") || act.includes("NOTIFICATION") || act.includes("SCAN") || desc.includes("PLAYBOOK");
+        if (!isPlaybook) return false;
+      }
+      if (filterCategory === "User") {
+        const isUser = act.includes("USER") || act.includes("ROLE") || act.includes("REGISTER") || act.includes("ROLE_CHANGED");
+        if (!isUser) return false;
+      }
+      if (filterCategory === "Vulnerability") {
+        const isVuln = act.includes("VULNERABILITY");
+        if (!isVuln) return false;
+      }
+      if (filterCategory === "Authentication") {
+        const isAuth = act === "LOGIN" || act === "REGISTER";
+        if (!isAuth) return false;
+      }
+      if (filterCategory === "Alert") {
+        const isAlert = act.includes("ALERT");
+        if (!isAlert) return false;
+      }
+      if (filterCategory === "Threat") {
+        const isThreat = act.includes("THREAT");
+        if (!isThreat) return false;
+      }
+      if (filterCategory === "IOC") {
+        const isIOC = act.includes("IOC");
+        if (!isIOC) return false;
+      }
+      if (filterCategory === "Report") {
+        const isReport = act.includes("REPORT");
+        if (!isReport) return false;
+      }
+    }
+
+    // Date range filter
+    if (startDate || endDate) {
+      const logDate = parseTimestamp(log.timestamp);
+      if (logDate) {
+        if (startDate) {
+          const start = new Date(startDate);
+          start.setHours(0, 0, 0, 0);
+          if (logDate < start) return false;
+        }
+        if (endDate) {
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+          if (logDate > end) return false;
+        }
+      } else {
+        return false;
+      }
+    }
+
+    return true;
+  });
 
   return (
     <>
@@ -150,23 +255,126 @@ function AuditLogs() {
           </div>
 
           <GlassCard className="p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-              <div>
-                <h2 className="text-2xl font-bold text-white">Incident Audit Timeline</h2>
-                <p className="text-slate-400 mt-1">Activity tracking details for the system and incidents.</p>
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-white">Incident Audit Timeline</h2>
+              <p className="text-slate-400 mt-1">Activity tracking details for the system and incidents.</p>
+            </div>
+
+            {/* Search & Filters */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4 mb-6 p-4 rounded-2xl bg-slate-950/40 border border-slate-850 items-end">
+              {/* User search */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Search User</label>
+                <input
+                  type="text"
+                  placeholder="Email, name..."
+                  value={searchUser}
+                  onChange={(e) => setSearchUser(e.target.value)}
+                  className="w-full rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs text-white placeholder:text-slate-500 focus:border-cyan-500 outline-none transition"
+                />
               </div>
-              <select
-                className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-white outline-none min-w-[200px]"
-                value={selectedIncidentId}
-                onChange={(e) => setSelectedIncidentId(e.target.value)}
-              >
-                <option value="">All Incidents / Events</option>
-                {incidents.map((incident) => (
-                  <option key={incident.id} value={incident.id}>
-                    Incident #{incident.id}: {incident.title}
-                  </option>
-                ))}
-              </select>
+
+              {/* Action type */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Action Type</label>
+                <select
+                  value={filterAction}
+                  onChange={(e) => setFilterAction(e.target.value)}
+                  className="w-full rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs text-white outline-none focus:border-cyan-500 transition"
+                >
+                  <option value="">All Actions</option>
+                  <option value="CREATE">CREATE</option>
+                  <option value="UPDATE">UPDATE</option>
+                  <option value="DELETE">DELETE</option>
+                  <option value="LOGIN">LOGIN</option>
+                  <option value="REGISTER">REGISTER</option>
+                  <option value="ROLE_CHANGED">ROLE_CHANGED</option>
+                  <option value="PLAYBOOK_STARTED">PLAYBOOK_STARTED</option>
+                  <option value="PLAYBOOK_COMPLETED">PLAYBOOK_COMPLETED</option>
+                  <option value="HOST_ISOLATED">HOST_ISOLATED</option>
+                  <option value="USER_DISABLED">USER_DISABLED</option>
+                </select>
+              </div>
+
+              {/* Category */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Category</label>
+                <select
+                  value={filterCategory}
+                  onChange={(e) => setFilterCategory(e.target.value)}
+                  className="w-full rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs text-white outline-none focus:border-cyan-500 transition"
+                >
+                  <option value="">All Categories</option>
+                  <option value="Incident">Incident Events</option>
+                  <option value="Playbook">Playbook Runs</option>
+                  <option value="User">User Operations</option>
+                  <option value="Vulnerability">Vulnerabilities</option>
+                  <option value="Authentication">Authentication</option>
+                  <option value="Alert">Alerts &amp; Rules</option>
+                  <option value="Threat">Threats</option>
+                  <option value="IOC">IOC Indicators</option>
+                  <option value="Report">Reports Downloaded</option>
+                </select>
+              </div>
+
+              {/* Incident selection */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Incident Target</label>
+                <select
+                  value={selectedIncidentId}
+                  onChange={(e) => setSelectedIncidentId(e.target.value)}
+                  className="w-full rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs text-white outline-none focus:border-cyan-500 transition"
+                >
+                  <option value="">All Incidents</option>
+                  {incidents.map((incident) => (
+                    <option key={incident.id} value={incident.id}>
+                      #{incident.id} - {incident.title.length > 15 ? incident.title.substring(0, 15) + "..." : incident.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Start Date */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Start Date</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs text-slate-400 outline-none focus:border-cyan-500 transition"
+                />
+              </div>
+
+              {/* End Date */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">End Date</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs text-slate-400 outline-none focus:border-cyan-500 transition"
+                />
+              </div>
+
+              {/* Reset Button */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Reset</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchUser("");
+                    setFilterAction("");
+                    setFilterCategory("");
+                    setSelectedIncidentId("");
+                    setStartDate("");
+                    setEndDate("");
+                  }}
+                  className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold border border-slate-750 hover:border-cyan-500/50 transition cursor-pointer shadow-sm"
+                  title="Clear all filters"
+                >
+                  <FaUndo className="text-[10px]" /> Reset
+                </button>
+              </div>
             </div>
 
             {loading ? (
@@ -210,11 +418,11 @@ function AuditLogs() {
 
           {/* Detailed Audit Log Modal */}
           {selectedLog && (
-            <div className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900/95 p-6 shadow-2xl relative my-8"
+                className="w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900/95 p-6 shadow-2xl relative my-8 max-h-[85vh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-850"
               >
                 {/* Close X Button */}
                 <button
@@ -244,7 +452,7 @@ function AuditLogs() {
                   {/* Description */}
                   <div>
                     <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Activity Description</h4>
-                    <p className="text-slate-300 text-sm mt-1.5 leading-relaxed bg-slate-950/40 rounded-xl border border-slate-800 p-3">
+                    <p className="text-slate-300 text-sm mt-1.5 leading-relaxed bg-slate-950/40 rounded-xl border border-slate-800 p-3 whitespace-pre-wrap break-words">
                       {selectedLog.description || "No description provided."}
                     </p>
                   </div>
@@ -286,7 +494,7 @@ function AuditLogs() {
                         </div>
                         <div>
                           <p className="font-semibold text-sm text-white">{selectedLog.incident.title}</p>
-                          <p className="text-slate-400 text-xs mt-1 line-clamp-3 leading-relaxed">{selectedLog.incident.description}</p>
+                          <p className="text-slate-400 text-xs mt-1 leading-relaxed whitespace-pre-wrap break-words">{selectedLog.incident.description}</p>
                         </div>
                         <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-800/60 text-slate-400">
                           <span>Status: <strong className="text-slate-300 font-semibold">{selectedLog.incident.status}</strong></span>

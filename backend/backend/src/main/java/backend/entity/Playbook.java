@@ -38,6 +38,9 @@ public class Playbook {
     @Builder.Default
     private Boolean isActive = true;
 
+    @Column(name = "estimated_time", length = 50)
+    private String estimatedTime;
+
     @OneToMany(mappedBy = "playbook", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @OrderBy("stepOrder ASC")
     @Builder.Default
