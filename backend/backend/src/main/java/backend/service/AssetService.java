@@ -10,6 +10,8 @@ import backend.exception.ResourceNotFoundException;
 import backend.mapper.AssetMapper;
 import backend.repository.AlertRepository;
 import backend.repository.AssetRepository;
+import backend.entity.Incident;
+import backend.repository.IncidentRepository;
 import backend.repository.UserRepository;
 import backend.specification.AssetSpecification;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +44,10 @@ public class AssetService {
     private final AuditLogService auditLogService;
     private final AlertRepository alertRepository;
     private final AlertNotificationService alertNotificationService;
+    private final IncidentRepository incidentRepository;
+    private final PlaybookService playbookService;
+
+    private static final Set<Long> activeOnlineAssetIds = Collections.synchronizedSet(new HashSet<>());
 
     // Get paginated and filtered assets
     public Page<AssetDto> getAssets(String hostname, String owner, String status,
@@ -542,6 +548,7 @@ public class AssetService {
         asset.setLastSeen(LocalDateTime.now());
 
         Asset saved = assetRepository.save(asset);
+        activeOnlineAssetIds.add(saved.getId());
 
         String newValue = String.format("Status: ONLINE, CPU: %s%%, RAM: %s%%, Disk: %s%%",
                 saved.getCpuUsage(), saved.getRamUsage(), saved.getDiskUsage());
@@ -617,11 +624,36 @@ public class AssetService {
                 "Status: OFFLINE"
         );
 
-        createOrUpdateAssetAlert(
-                saved,
-                "Asset Offline",
-                "Critical",
-                String.format("Asset %s has not sent a heartbeat for over 2 minutes. Status is marked as OFFLINE.", saved.getHostname())
-        );
+        boolean wasActivelyOnline = activeOnlineAssetIds.remove(saved.getId());
+
+        if (wasActivelyOnline) {
+            createOrUpdateAssetAlert(
+                    saved,
+                    "Asset Offline",
+                    "Critical",
+                    String.format("Asset %s has not sent a heartbeat for over 2 minutes. Status is marked as OFFLINE.", saved.getHostname())
+            );
+
+            // Create Incident for Playbook run
+            Incident incident = Incident.builder()
+                    .title("Asset Offline: " + saved.getHostname())
+                    .description(String.format("Asset %s has not sent a heartbeat for over 2 minutes. Status is marked as OFFLINE.", saved.getHostname()))
+                    .severity("Critical")
+                    .status("Open")
+                    .source("Asset Monitor")
+                    .priority("P3")
+                    .slaDeadline(LocalDateTime.now().plusHours(8))
+                    .asset(saved)
+                    .build();
+
+            Incident savedIncident = incidentRepository.save(incident);
+
+            // Trigger Playbook automatically
+            try {
+                playbookService.triggerAssetOfflinePlaybook(savedIncident);
+            } catch (Exception e) {
+                System.err.println("Failed to trigger Asset Offline playbook automatically: " + e.getMessage());
+            }
+        }
     }
 }

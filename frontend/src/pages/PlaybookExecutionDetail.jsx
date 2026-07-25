@@ -19,6 +19,8 @@ function PlaybookExecutionDetail() {
   const [logs, setLogs] = useState([]);
   const terminalEndRef = useRef(null);
 
+
+
   useEffect(() => {
     // Initial fetch
     fetchDetailsAndLogs();
@@ -77,17 +79,7 @@ function PlaybookExecutionDetail() {
     return "text-slate-300";
   };
 
-  const [unblocked, setUnblocked] = useState(false);
 
-  const handleReleaseBlock = async () => {
-    if (unblocked) return;
-    try {
-      await playbookService.resetSimulation();
-      setUnblocked(true);
-    } catch (err) {
-      console.error("Failed to release block", err);
-    }
-  };
 
   return (
     <>
@@ -116,17 +108,7 @@ function PlaybookExecutionDetail() {
                   subtitle={`Triggered on incident ID: #${execution.incidentId || "N/A"}`}
                 />
                 <div className="flex items-center gap-4">
-                  <button
-                    disabled={unblocked}
-                    onClick={handleReleaseBlock}
-                    className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-xs shadow-lg transition-all duration-300 ${
-                      unblocked 
-                        ? "bg-slate-800/80 text-slate-500 border border-slate-700/60 cursor-not-allowed" 
-                        : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-500/25 cursor-pointer"
-                    }`}
-                  >
-                    {unblocked ? "Released" : "Release Block"}
-                  </button>
+
 
                   <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 rounded-xl px-5 py-3 shadow-lg">
                     {getStatusIcon(execution.status)}

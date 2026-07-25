@@ -91,6 +91,13 @@ function IncidentDetail() {
   const [playbooks, setPlaybooks] = useState([]);
   const [executions, setExecutions] = useState([]);
   const [error, setError] = useState("");
+  const [releasedIds, setReleasedIds] = useState(new Set());
+
+  const isNecessaryIncident = (playbookName) => {
+    if (!playbookName) return false;
+    const name = playbookName.toLowerCase();
+    return name.includes("brute force") || name.includes("malware") || name.includes("privilege") || name.includes("phishing");
+  };
 
   const role = localStorage.getItem("role");
   const canWrite = ["ADMIN", "ANALYST"].includes(role);
@@ -338,6 +345,28 @@ function IncidentDetail() {
                               <span className="font-mono font-bold text-slate-400">{exec.progress}%</span>
                             </div>
 
+                            {isNecessaryIncident(exec.playbookName) && (
+                              <button
+                                disabled={releasedIds.has(exec.id)}
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  try {
+                                    await playbookService.resetSimulation();
+                                    setReleasedIds(prev => new Set(prev).add(exec.id));
+                                  } catch (err) {
+                                    console.error("Release error", err);
+                                  }
+                                }}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-all duration-300 outline-none cursor-pointer ${
+                                  releasedIds.has(exec.id)
+                                    ? "bg-slate-800/80 text-slate-500 border border-slate-700/60 cursor-not-allowed"
+                                    : "bg-emerald-500/10 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/20"
+                                }`}
+                                title={releasedIds.has(exec.id) ? "Block already released" : "Release IP & User Account Block"}
+                              >
+                                {releasedIds.has(exec.id) ? "Released" : "Release Block"}
+                              </button>
+                            )}
                             <button
                               onClick={() => navigate(`/playbooks/executions/${exec.id}`)}
                               className="bg-sky-500/10 hover:bg-sky-500 text-sky-400 hover:text-white border border-sky-500/20 px-3 py-1.5 rounded-lg font-bold transition cursor-pointer whitespace-nowrap"

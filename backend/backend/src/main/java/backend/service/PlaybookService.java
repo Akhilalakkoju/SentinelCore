@@ -41,12 +41,22 @@ public class PlaybookService {
         private final AlertRepository alertRepository;
         private final IOCRepository iocRepository;
 
+        @jakarta.persistence.PersistenceContext
+        private jakarta.persistence.EntityManager entityManager;
+
         private final ExecutorService executorService = Executors.newCachedThreadPool();
 
         // ================= Database Seeder =================
         @PostConstruct
         @Transactional
         public void seedDefaultPlaybooks() {
+                // Drop existing check constraint if database already exists to allow new action types
+                try {
+                        entityManager.createNativeQuery("ALTER TABLE playbook_steps DROP CONSTRAINT IF EXISTS playbook_steps_action_type_check").executeUpdate();
+                } catch (Exception e) {
+                        log.warn("Could not drop constraint on playbook_steps: {}", e.getMessage());
+                }
+
                 // Seed sample incidents idempotently
                 seedIncident("Brute Force Detection on Main Portal",
                                 "Detected 15 failed authentication attempts for user 'admin' within 2 minutes from IP 192.168.1.105.",
@@ -70,6 +80,7 @@ public class PlaybookService {
                 seedPrivEscPlaybook();
                 seedVulnScanPlaybook();
                 seedPhishingPlaybook();
+                seedAssetOfflinePlaybook();
 
                 // Resolve any stuck PENDING executions on startup
                 List<PlaybookExecution> stuckExecs = playbookExecutionRepository.findAll();
@@ -348,6 +359,54 @@ public class PlaybookService {
                 }
         }
 
+        private void seedAssetOfflinePlaybook() {
+                java.util.Optional<Playbook> existing = playbookRepository.findByName("Asset Offline Notification");
+                if (existing.isPresent()) {
+                        Playbook pb = existing.get();
+                        List<PlaybookStep> steps = playbookStepRepository.findByPlaybookIdOrderByStepOrderAsc(pb.getId());
+                        if (steps.size() != 1) {
+                                log.info("Re-seeding steps for Asset Offline Notification playbook...");
+                                try {
+                                        playbookStepRepository.deleteAll(steps);
+                                        
+                                        PlaybookStep step1 = PlaybookStep.builder()
+                                                        .playbook(pb)
+                                                        .stepOrder(1)
+                                                        .name("Send Asset Offline Notification")
+                                                        .actionType("SEND_NOTIFICATION")
+                                                        .parametersJson("{\"channel\":\"EMAIL\",\"recipient\":\"admin@sentinelcore.com\",\"severity\":\"Critical\"}")
+                                                        .build();
+                                        playbookStepRepository.save(step1);
+                                } catch (Exception e) {
+                                        log.error("Failed to re-seed steps: {}", e.getMessage());
+                                }
+                        }
+                        return;
+                }
+
+                log.info("Seeding Asset Offline Notification playbook...");
+                Playbook assetOffline = Playbook.builder()
+                                .name("Asset Offline Notification")
+                                .description("Triggered when an asset is detected as offline. Automatically sends alert notifications to administrators.")
+                                .triggerType("ALERT_TYPE")
+                                .triggerValue("Asset Offline")
+                                .conditionsJson("{\"heartbeatTimeoutSeconds\":120}")
+                                .isActive(true)
+                                .build();
+
+                assetOffline = playbookRepository.save(assetOffline);
+
+                PlaybookStep step1 = PlaybookStep.builder()
+                                .playbook(assetOffline)
+                                .stepOrder(1)
+                                .name("Send Asset Offline Notification")
+                                .actionType("SEND_NOTIFICATION")
+                                .parametersJson("{\"channel\":\"EMAIL\",\"recipient\":\"admin@sentinelcore.com\",\"severity\":\"Critical\"}")
+                                .build();
+
+                playbookStepRepository.saveAll(List.of(step1));
+        }
+
         // ================= Config CRUD Operations =================
         @Transactional(readOnly = true)
         public List<PlaybookDto> getAllPlaybooks() {
@@ -572,7 +631,10 @@ public class PlaybookService {
                                         Thread.sleep(300);
 
                                         // Perform action logic
-                                        performAction(execution, step);
+                                        boolean paused = performAction(execution, step);
+                                        if (paused) {
+                                                return; // Stop execution loop here, waiting for acknowledgment
+                                        }
 
                                         writeExecutionLog(execution, step.getName(), "SUCCESS", "INFO",
                                                         "Action successfully finished.");
@@ -625,11 +687,32 @@ public class PlaybookService {
                 }, executorService);
         }
 
-        private void performAction(PlaybookExecution execution, PlaybookStep step) throws Exception {
+        private boolean performAction(PlaybookExecution execution, PlaybookStep step) throws Exception {
                 String action = step.getActionType();
                 String params = step.getParametersJson();
 
                 switch (action) {
+                        case "VERIFY_HEARTBEAT":
+                                writeExecutionLog(execution, step.getName(), "RUNNING", "INFO",
+                                                "Checking recent heartbeat logs for the target asset...");
+                                Thread.sleep(200);
+                                writeExecutionLog(execution, step.getName(), "SUCCESS", "INFO",
+                                                "Heartbeat verification complete: Target asset confirmed OFFLINE (last heartbeat > 2 minutes ago).");
+                                break;
+                        case "IDENTIFY_CRITICALITY":
+                                writeExecutionLog(execution, step.getName(), "RUNNING", "INFO",
+                                                "Retrieving asset metadata and impact classification from CMDB...");
+                                Thread.sleep(200);
+                                writeExecutionLog(execution, step.getName(), "SUCCESS", "INFO",
+                                                "Asset profile resolved: Host is classified as CRITICAL production database server.");
+                                break;
+                        case "TRIGGER_DIAGNOSTICS":
+                                writeExecutionLog(execution, step.getName(), "RUNNING", "INFO",
+                                                "Initializing remote ping sweep and routing diagnostics...");
+                                Thread.sleep(200);
+                                writeExecutionLog(execution, step.getName(), "SUCCESS", "INFO",
+                                                "Diagnostics complete: Remote port 80/443 unreachable. Host network adapter is unresponsive.");
+                                break;
                         case "CHECK_DOMAIN":
                                 writeExecutionLog(execution, step.getName(), "RUNNING", "INFO",
                                                 "Verifying sender domain reputation against Threat Intel lists...");
@@ -717,29 +800,47 @@ public class PlaybookService {
                                                 "Vulnerability scan completed. 0 High, 2 Medium vulnerabilities discovered.");
                                 break;
                         case "SEND_NOTIFICATION":
-                                writeExecutionLog(execution, step.getName(), "RUNNING", "INFO",
-                                                "Compiling alert email/Slack template...");
-                                PlaybookNotification notif = PlaybookNotification.builder()
-                                                .playbookExecution(execution)
-                                                .recipient("soc-channel@sentinelcore.com")
-                                                .channel("EMAIL")
-                                                .message("Automated Action: " + execution.getPlaybookName()
-                                                                + " has run step [" + step.getName()
-                                                                + "] for Incident #" + execution.getIncidentId())
-                                                .status("SENT")
-                                                .build();
-                                playbookNotificationRepository.save(notif);
+                                if ("Asset Offline Notification".equals(execution.getPlaybookName())) {
+                                        Incident targetIncident = execution.getIncident();
+                                        String assetName = (targetIncident != null && targetIncident.getAsset() != null)
+                                                ? targetIncident.getAsset().getHostname()
+                                                : "Unknown Asset";
 
-                                if (notificationService != null) {
-                                        notificationService.saveNotification(
-                                                        "Automated Playbook Action: " + execution.getPlaybookName(),
-                                                        "High",
-                                                        "Playbook executed automatically for Incident #" + execution.getIncidentId() + ": Containment rules enforced."
-                                        );
+                                        if (notificationService != null) {
+                                                notificationService.saveNotification(
+                                                        "Asset Offline Alert",
+                                                        "Critical",
+                                                        "Asset " + assetName + " has gone OFFLINE. (Playbook run #" + execution.getId() + ")"
+                                                );
+                                        }
+
+                                        writeExecutionLog(execution, step.getName(), "SUCCESS", "INFO",
+                                                "Action: Sent alert notification to Administrator.");
+                                } else {
+                                        writeExecutionLog(execution, step.getName(), "RUNNING", "INFO",
+                                                        "Compiling alert email/Slack template...");
+                                        PlaybookNotification notif = PlaybookNotification.builder()
+                                                        .playbookExecution(execution)
+                                                        .recipient("soc-channel@sentinelcore.com")
+                                                        .channel("EMAIL")
+                                                        .message("Automated Action: " + execution.getPlaybookName()
+                                                                        + " has run step [" + step.getName()
+                                                                        + "] for Incident #" + execution.getIncidentId())
+                                                        .status("SENT")
+                                                        .build();
+                                        playbookNotificationRepository.save(notif);
+
+                                        if (notificationService != null) {
+                                                notificationService.saveNotification(
+                                                                "Automated Playbook Action: " + execution.getPlaybookName(),
+                                                                "High",
+                                                                "Playbook executed automatically for Incident #" + execution.getIncidentId() + ": Containment rules enforced."
+                                                );
+                                        }
+
+                                        writeExecutionLog(execution, step.getName(), "RUNNING", "INFO", "Alert sent to: "
+                                                        + notif.getRecipient() + " over " + notif.getChannel());
                                 }
-
-                                writeExecutionLog(execution, step.getName(), "RUNNING", "INFO", "Alert sent to: "
-                                                + notif.getRecipient() + " over " + notif.getChannel());
                                 break;
                         case "CREATE_INCIDENT":
                                 // If triggered on an existing incident, update it instead of creating a duplicate
@@ -1075,6 +1176,7 @@ public class PlaybookService {
                         default:
                                 throw new IllegalArgumentException("Unknown playbook step action: " + action);
                 }
+                return false;
         }
 
         private void writeExecutionLog(PlaybookExecution execution, String stepName, String status, String level,
@@ -1153,6 +1255,43 @@ public class PlaybookService {
                                 .createdAt(playbook.getCreatedAt())
                                 .updatedAt(playbook.getUpdatedAt())
                                 .build();
+        }
+
+        @Transactional
+        public PlaybookExecutionDto triggerAssetOfflinePlaybook(Incident incident) {
+                Playbook playbook = playbookRepository.findByName("Asset Offline Notification")
+                                .orElseGet(() -> {
+                                        seedAssetOfflinePlaybook();
+                                        return playbookRepository.findByName("Asset Offline Notification")
+                                                        .orElseThrow(() -> new RuntimeException("Asset Offline playbook not seeded"));
+                                });
+
+                if (!playbook.getIsActive()) {
+                        log.info("Asset Offline playbook is inactive, skipping execution.");
+                        return null;
+                }
+
+                PlaybookExecution execution = PlaybookExecution.builder()
+                                .playbook(playbook)
+                                .playbookName(playbook.getName())
+                                .incident(incident)
+                                .incidentId(incident.getId())
+                                .status("PENDING")
+                                .currentStep("Queued for execution")
+                                .currentStepIndex(0)
+                                .progress(0)
+                                .startedAt(LocalDateTime.now())
+                                .build();
+
+                execution = playbookExecutionRepository.save(execution);
+
+                // Run asynchronously
+                runAsyncExecution(execution.getId(), playbook.getId());
+
+                saveAuditLog("TRIGGER_PLAYBOOK", execution.getId(),
+                                "Automatically triggered Asset Offline Playbook for Incident ID: " + incident.getId());
+
+                return convertToExecutionDto(execution);
         }
 
         public PlaybookExecutionDto triggerPhishingPlaybook(Alert alert) {

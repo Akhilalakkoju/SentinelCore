@@ -344,26 +344,7 @@ function PlaybookList() {
                             >
                               <FaEye className="text-xs" /> View Logs
                             </motion.button>
-                            <button
-                              disabled={releasedIds.has(exec.id)}
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                try {
-                                  await playbookService.resetSimulation();
-                                  setReleasedIds(prev => new Set(prev).add(exec.id));
-                                } catch (err) {
-                                  console.error("Release error", err);
-                                }
-                              }}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all duration-300 outline-none ${
-                                releasedIds.has(exec.id)
-                                  ? "bg-slate-800/80 text-slate-500 border border-slate-700/60 cursor-not-allowed"
-                                  : "bg-emerald-500/10 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/20"
-                              }`}
-                              title={releasedIds.has(exec.id) ? "Block already released" : "Release IP & User Account Block"}
-                            >
-                              {releasedIds.has(exec.id) ? "Released" : "Release Block"}
-                            </button>
+
                           </div>
                         </td>
                       </motion.tr>
@@ -511,6 +492,9 @@ function PlaybookList() {
                               <option value="SCAN_VULNERABILITY">Scan Vulnerability</option>
                               <option value="SEND_NOTIFICATION">Send Notification</option>
                               <option value="CREATE_INCIDENT">Create Incident</option>
+                              <option value="VERIFY_HEARTBEAT">Verify Heartbeat</option>
+                              <option value="IDENTIFY_CRITICALITY">Identify Criticality</option>
+                              <option value="TRIGGER_DIAGNOSTICS">Trigger Diagnostics</option>
                             </select>
 
                             <input
