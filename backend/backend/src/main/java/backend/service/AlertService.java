@@ -24,6 +24,9 @@ public class AlertService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private PlaybookService playbookService;
+
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
@@ -45,8 +48,22 @@ public class AlertService {
 
     // Add Alert
     public Alert addAlert(Alert alert) {
+        if (alert.getStatus() == null) {
+            alert.setStatus("Open");
+        }
         Alert saved = alertRepository.save(alert);
         auditLogService.createLog("CREATE_ALERT", "New alert created: " + saved.getTitle() + " (Severity: " + saved.getSeverity() + ")", getCurrentUser(), null);
+
+        if (saved.getTitle() != null && 
+            (saved.getTitle().toLowerCase().contains("phishing") || 
+             "Phishing Simulator".equalsIgnoreCase(saved.getSource()) || 
+             "Email Gateway".equalsIgnoreCase(saved.getSource()))) {
+            try {
+                playbookService.triggerPhishingPlaybook(saved);
+            } catch (Exception e) {
+                System.err.println("Failed to trigger phishing playbook automatically: " + e.getMessage());
+            }
+        }
         return saved;
     }
 
@@ -92,4 +109,8 @@ public class AlertService {
         auditLogService.createLog("UPDATE_ALERT", "Alert status updated from " + oldStatus + " to " + status + " for " + saved.getTitle(), getCurrentUser(), null);
         return saved;
     }
-}
+
+    public List<Alert> getAlertsByAsset(Long assetId) {
+        return alertRepository.findByAssetId(assetId);
+    }
+}

@@ -32,6 +32,8 @@ function PlaybookExecutionDetail() {
   const [actionLoading, setActionLoading] = useState(false);
   const terminalEndRef = useRef(null);
 
+
+
   useEffect(() => {
     // Initial fetch
     fetchDetailsAndLogs();
@@ -145,6 +147,8 @@ function PlaybookExecutionDetail() {
     return "text-slate-300";
   };
 
+
+
   return (
     <>
       <Navbar />
@@ -171,11 +175,15 @@ function PlaybookExecutionDetail() {
                   title={`Run #${execution.id}: ${execution.playbookName}`}
                   subtitle={`Triggered on incident ID: #${execution.incidentId || "N/A"}`}
                 />
-                <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 rounded-xl px-5 py-3 shadow-lg">
-                  {getStatusIcon(execution.status)}
-                  <div>
-                    <div className="text-xs text-slate-500 uppercase font-semibold">Status</div>
-                    <div className="text-sm font-bold text-white tracking-wider">{execution.status}</div>
+                <div className="flex items-center gap-4">
+
+
+                  <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 rounded-xl px-5 py-3 shadow-lg">
+                    {getStatusIcon(execution.status)}
+                    <div>
+                      <div className="text-xs text-slate-500 uppercase font-semibold">Status</div>
+                      <div className="text-sm font-bold text-white tracking-wider">{execution.status}</div>
+                    </div>
                   </div>
                 </div>
               </div>

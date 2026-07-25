@@ -36,6 +36,8 @@ public class IncidentDto {
     private String priority;
     private Boolean escalated;
     private LocalDateTime slaDeadline;
+    private Long assetId;
+    private String assetName;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<KnowledgeBaseArticleSummaryDto> linkedArticles;

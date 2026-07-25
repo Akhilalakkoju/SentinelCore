@@ -46,6 +46,13 @@ public class SecurityConfig {
                         // Public APIs
                         // ===========================
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/assets/register").permitAll()
+                        .requestMatchers("/api/assets/heartbeat").permitAll()
+                        .requestMatchers("/api/playbooks/simulate-brute-force").permitAll()
+                        .requestMatchers("/api/playbooks/target-status").permitAll()
+                        .requestMatchers("/api/playbooks/reset-simulation").permitAll()
+                        .requestMatchers("/api/playbooks/simulate-phishing").permitAll()
+                        .requestMatchers("/api/playbooks/executions/**").permitAll()
 
                         // ===========================
                         // WebSocket
@@ -71,6 +78,25 @@ public class SecurityConfig {
                         // ===========================
                         .requestMatchers("/api/dashboard/**")
                         .hasAnyRole("ADMIN", "ANALYST", "VIEWER", "MANAGER")
+
+                        // ===========================
+                        // Asset APIs
+                        // ===========================
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/assets/**")
+                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER")
+
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/assets/**")
+                        .hasAnyRole("ADMIN", "ANALYST")
+
+                        .requestMatchers(HttpMethod.PUT,
+                                "/api/assets/**")
+                        .hasAnyRole("ADMIN", "ANALYST")
+
+                        .requestMatchers(HttpMethod.DELETE,
+                                "/api/assets/**")
+                        .hasRole("ADMIN")
 
                         // ===========================
                         // Threat APIs

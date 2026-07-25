@@ -1,3 +1,7 @@
+
+
+import AlertAnalysisModal from "../components/AlertAnalysisModal";
+import { analyzeAlert } from "../services/alertAIService";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -18,6 +22,9 @@ function AlertList() {
 
     const [alerts, setAlerts] = useState([]);
     const [search, setSearch] = useState("");
+    const [analysisOpen, setAnalysisOpen] = useState(false);
+    const [analysis, setAnalysis] = useState("");
+    const [loadingAnalysis, setLoadingAnalysis] = useState(false);
     const [severityFilter, setSeverityFilter] = useState("All");
 
     const role = localStorage.getItem("role");
@@ -130,6 +137,28 @@ function AlertList() {
         }
 
     };
+
+    const analyzeWithAI = async (alert) => {
+
+    setAnalysisOpen(true);
+    setLoadingAnalysis(true);
+    setAnalysis("");
+
+    try {
+
+        const result = await analyzeAlert(alert);
+
+        setAnalysis(result.analysis);
+
+    } catch (err) {
+
+        setAnalysis("Failed to analyze alert.");
+
+    }
+
+    setLoadingAnalysis(false);
+
+};
 
     return (
         <>
@@ -257,7 +286,16 @@ function AlertList() {
                                             </td>
 
                                             <td className="p-4 font-semibold text-white">
-                                                {alert.title}
+                                                {alert.asset ? (
+                                                    <span
+                                                        onClick={() => navigate(`/assets/detail/${alert.asset.id}`)}
+                                                        className="cursor-pointer text-cyan-400 hover:text-cyan-300 hover:underline"
+                                                    >
+                                                        {alert.title}
+                                                    </span>
+                                                ) : (
+                                                    alert.title
+                                                )}
                                             </td>
 
                                             <td className="p-4">
@@ -334,6 +372,12 @@ function AlertList() {
                                                     >
                                                         Edit
                                                     </button>
+                                                    <button
+                                                        onClick={() => analyzeWithAI(alert)}
+                                                        className="px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white mr-2 transition-all duration-200"
+                                                    >
+                                                        🤖 Analyze
+                                                    </button>
 
                                                     {isAdmin && (
                                                         <button
@@ -378,6 +422,12 @@ function AlertList() {
                     </TableContainer>
 
                 </div>
+                <AlertAnalysisModal
+                    open={analysisOpen}
+                    onClose={() => setAnalysisOpen(false)}
+                    analysis={analysis}
+                    loading={loadingAnalysis}
+                />
 
             </main>
 

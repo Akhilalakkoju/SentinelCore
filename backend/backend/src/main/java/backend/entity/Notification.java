@@ -90,4 +90,15 @@ public class Notification {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
+
+    @Column(name = "playbook_execution_id")
+    private Long playbookExecutionId;
+
+    public Long getPlaybookExecutionId() {
+        return playbookExecutionId;
+    }
+
+    public void setPlaybookExecutionId(Long playbookExecutionId) {
+        this.playbookExecutionId = playbookExecutionId;
+    }
 }

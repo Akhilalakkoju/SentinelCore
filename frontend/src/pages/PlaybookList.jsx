@@ -35,9 +35,13 @@ function PlaybookList() {
     ]
   });
 
+  const [releasedIds, setReleasedIds] = useState(new Set());
+
   useEffect(() => {
     fetchPlaybooks();
     fetchExecutions();
+    const interval = setInterval(fetchExecutions, 2000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchPlaybooks = async () => {
@@ -160,7 +164,7 @@ function PlaybookList() {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setIsCreateModalOpen(true)}
-                className="flex items-center gap-2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white px-5 py-3 rounded-xl font-semibold shadow-lg shadow-sky-500/25 transition-all duration-300"
+                className="flex items-center gap-2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white px-5 py-3 rounded-xl font-semibold shadow-lg shadow-sky-500/25 transition-all duration-300 text-sm"
               >
                 <FaPlus className="text-sm" /> Create Playbook
               </motion.button>
@@ -330,14 +334,18 @@ function PlaybookList() {
                           {exec.startedAt ? new Date(exec.startedAt).toLocaleString() : "N/A"}
                         </td>
                         <td className="p-4 text-center">
-                          <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => navigate(`/playbooks/executions/${exec.id}`)}
-                            className="bg-sky-500/10 hover:bg-sky-500 text-sky-400 hover:text-white border border-sky-500/20 p-2 rounded-lg transition-all duration-300 outline-none"
-                          >
-                            <FaEye className="text-xs" />
-                          </motion.button>
+                          <div className="flex items-center justify-center gap-2">
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => navigate(`/playbooks/executions/${exec.id}`)}
+                              className="bg-sky-500/10 hover:bg-sky-500 text-sky-400 hover:text-white border border-sky-500/20 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all duration-300 outline-none"
+                              title="View Execution Details & Logs"
+                            >
+                              <FaEye className="text-xs" /> View Logs
+                            </motion.button>
+
+                          </div>
                         </td>
                       </motion.tr>
                     ))
@@ -484,6 +492,9 @@ function PlaybookList() {
                               <option value="SCAN_VULNERABILITY">Scan Vulnerability</option>
                               <option value="SEND_NOTIFICATION">Send Notification</option>
                               <option value="CREATE_INCIDENT">Create Incident</option>
+                              <option value="VERIFY_HEARTBEAT">Verify Heartbeat</option>
+                              <option value="IDENTIFY_CRITICALITY">Identify Criticality</option>
+                              <option value="TRIGGER_DIAGNOSTICS">Trigger Diagnostics</option>
                             </select>
 
                             <input

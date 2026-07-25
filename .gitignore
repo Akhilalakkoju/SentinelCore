@@ -14,3 +14,12 @@ frontend/dist/
 
 # Environment
 .env
+# Python
+ai-service/venv/
+venv/
+__pycache__/
+*.pyc
+
+# Environment variables
+.env
+ai-service/.env

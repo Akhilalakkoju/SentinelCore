@@ -15,6 +15,9 @@ import {
   FaBookOpen,
   FaBook,
   FaHistory,
+  FaEnvelopeOpen,
+  FaServer,
+  FaLaptop,
 } from "react-icons/fa";
 
 import { useRef, useEffect } from "react";
@@ -116,6 +119,16 @@ function Sidebar() {
       title: "Vulnerabilities",
       icon: <FaBug />,
       path: "/vulnerabilities",
+    },
+    {
+      title: "Asset Dashboard",
+      icon: <FaServer />,
+      path: "/assets/dashboard",
+    },
+    {
+      title: "Asset Inventory",
+      icon: <FaLaptop />,
+      path: "/assets",
     },
     {
       title: "Audit Logs",

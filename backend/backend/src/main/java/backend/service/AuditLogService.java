@@ -48,6 +48,24 @@ public List<AuditLog> getAllLogs() {
 
     }
 
+    public void createLog(
+            String action,
+            String description,
+            User user) {
+
+        AuditLog log = new AuditLog();
+
+        log.setAction(action);
+
+        log.setDescription(description);
+
+        log.setUser(user);
+
+        log.setTimestamp(LocalDateTime.now());
+
+        auditRepository.save(log);
+    }
+
 
 
     public List<AuditLog> getIncidentLogs(Long incidentId){
@@ -55,6 +73,21 @@ public List<AuditLog> getAllLogs() {
         return auditRepository
                 .findByIncidentId(incidentId);
 
+    }
+
+    public List<AuditLog> getAssetLogs(Long assetId) {
+        return auditRepository.findByAssetId(assetId);
+    }
+
+    public void createAssetLog(String action, String description, Asset asset, String oldValue, String newValue) {
+        AuditLog log = new AuditLog();
+        log.setAction(action);
+        log.setDescription(description);
+        log.setAsset(asset);
+        log.setOldValue(oldValue);
+        log.setNewValue(newValue);
+        log.setTimestamp(LocalDateTime.now());
+        auditRepository.save(log);
     }
 
 }

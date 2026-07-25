@@ -34,11 +34,18 @@ import VulnerabilityDashboard from "../pages/VulnerabilityDashboard";
 
 import IncidentList from "../pages/IncidentList";
 import KnowledgeBase from "../pages/KnowledgeBase";
+import IncidentDetail from "../pages/IncidentDetail";
 
 import PlaybookList from "../pages/PlaybookList";
 import PlaybookExecutionDetail from "../pages/PlaybookExecutionDetail";
 
 import AuditLogs from "../pages/AuditLogs";
+
+import AssetDashboard from "../pages/AssetDashboard";
+import AssetList from "../pages/AssetList";
+import AddAsset from "../pages/AddAsset";
+import EditAsset from "../pages/EditAsset";
+import AssetDetail from "../pages/AssetDetail";
 
 import ProtectedRoute from "./ProtectedRoute";
 
@@ -162,6 +169,33 @@ function AppRoutes() {
                     element={protect(<EditUser />, adminRoles)}
                 />
 
+                {/* Assets */}
+
+                <Route
+                    path="/assets/dashboard"
+                    element={protect(<AssetDashboard />)}
+                />
+
+                <Route
+                    path="/assets"
+                    element={protect(<AssetList />)}
+                />
+
+                <Route
+                    path="/assets/add"
+                    element={protect(<AddAsset />, writeRoles)}
+                />
+
+                <Route
+                    path="/assets/edit/:id"
+                    element={protect(<EditAsset />, writeRoles)}
+                />
+
+                <Route
+                    path="/assets/detail/:id"
+                    element={protect(<AssetDetail />)}
+                />
+
                 {/* Vulnerability Scanner */}
 
                 <Route
@@ -186,6 +220,11 @@ function AppRoutes() {
                 <Route
                     path="/incidents"
                     element={protect(<IncidentList />)}
+                />
+
+                <Route
+                    path="/incidents/:id"
+                    element={protect(<IncidentDetail />)}
                 />
 
                 {/* Knowledge Base */}

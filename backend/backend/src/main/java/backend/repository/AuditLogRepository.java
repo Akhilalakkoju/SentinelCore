@@ -15,8 +15,10 @@ public interface AuditLogRepository
 
     List<AuditLog> findByUserId(Long userId);
 
+    List<AuditLog> findByAssetId(Long assetId);
+
     @Modifying
     @Query("UPDATE AuditLog a SET a.user = null WHERE a.user.id = :userId")
     void nullifyUserReferences(@Param("userId") Long userId);
 
-}
+}

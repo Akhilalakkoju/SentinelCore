@@ -34,10 +34,18 @@ public class IncidentService {
     private final backend.repository.PlaybookNotificationRepository playbookNotificationRepository;
     private final backend.repository.PlaybookAuditLogRepository playbookAuditLogRepository;
     private final KnowledgeBaseArticleRepository kbArticleRepository;
+    private final backend.repository.AssetRepository assetRepository;
 
     // Get All Incidents
     public List<IncidentDto> getAllIncidents() {
         return incidentRepository.findAllByOrderByEscalatedDescIdDesc().stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
+    // Get Incidents by Asset ID
+    public List<IncidentDto> getIncidentsByAsset(Long assetId) {
+        return incidentRepository.findByAssetId(assetId).stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
@@ -297,6 +305,11 @@ public class IncidentService {
             builder.linkedArticles(new ArrayList<>());
         }
 
+        if (incident.getAsset() != null) {
+            builder.assetId(incident.getAsset().getId())
+                   .assetName(incident.getAsset().getAssetName());
+        }
+
         return builder.build();
     }
 
@@ -314,6 +327,12 @@ public class IncidentService {
             User user = userRepository.findById(dto.getAssignedToId())
                     .orElseThrow(() -> new RuntimeException("User not found with id: " + dto.getAssignedToId()));
             builder.assignedTo(user);
+        }
+
+        if (dto.getAssetId() != null) {
+            backend.entity.Asset asset = assetRepository.findById(dto.getAssetId())
+                    .orElseThrow(() -> new RuntimeException("Asset not found with id: " + dto.getAssetId()));
+            builder.asset(asset);
         }
 
         return builder.build();
