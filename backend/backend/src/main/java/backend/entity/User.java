@@ -31,7 +31,7 @@ public class User {
     @Column(length = 2000)
     private String profileImage;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "VARCHAR(255) DEFAULT 'dark'")
     private String theme = "dark";
 
     public User() {
