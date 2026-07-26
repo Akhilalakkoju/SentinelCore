@@ -2,10 +2,11 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FaEnvelope, FaLock, FaEye, FaEyeSlash, FaShieldAlt } from "react-icons/fa";
-import { toast } from "react-toastify";
 
 import api from "../services/api";
 import AnimatedBackground from "../components/AnimatedBackground";
+import { toast } from "react-hot-toast";
+
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -18,13 +19,13 @@ function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) {
-      toast.warn("Please enter both email and password.");
+      toast.error("Please enter email and password");
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      toast.error("Please enter a valid email address.");
+      toast.error("Please enter a valid email address");
       return;
     }
 
@@ -36,7 +37,7 @@ function Login() {
       });
 
       if (!response.data.token) {
-        toast.error(response.data.message || "Invalid credentials.");
+        toast.error(response.data.message || "Invalid login response");
         setIsLoading(false);
         return;
       }
@@ -47,19 +48,29 @@ function Login() {
       localStorage.setItem("role", response.data.role);
       localStorage.setItem("isLoggedIn", "true");
 
-      toast.success(response.data.message || "Login successful!");
+      toast.success(response.data.message || "Login Successful");
+
       navigate("/dashboard");
     } catch (error) {
-      console.error(error);
-      if (error.response) {
-        toast.error(error.response.data.message || "Login failed.");
-      } else {
-        toast.error("Network error. Server is not responding.");
+      console.log(error);
+
+      let errorMessage = "Login Failed";
+      if (error.response?.data) {
+        if (typeof error.response.data === "string") {
+          errorMessage = error.response.data;
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
       }
+
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-slate-950 relative overflow-hidden flex items-center justify-center p-4">

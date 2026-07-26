@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import AuthLayout from "../components/auth/AuthLayout";
 import RegisterForm from "../components/auth/RegisterForm";
 import api from "../services/api";
+import { toast } from "react-hot-toast";
 
 function Register() {
 
@@ -19,12 +20,17 @@ function Register() {
         e.preventDefault();
 
         if (!name || !email || !password || !confirmPassword) {
-            alert("Please fill all fields");
+            toast.error("Please fill in all required fields.");
             return;
         }
 
         if (password !== confirmPassword) {
-            alert("Passwords do not match");
+            toast.error("Passwords do not match.");
+            return;
+        }
+
+        if (password.length < 8) {
+            toast.error("Password must be at least 8 characters long.");
             return;
         }
 
@@ -38,17 +44,28 @@ function Register() {
                 password
             });
 
-            alert(response.data);
+            const successMessage = typeof response.data === "string" 
+                ? response.data 
+                : (response.data?.message || "Registration Successful!");
 
+            toast.success(successMessage);
             navigate("/login");
 
         } catch (error) {
 
-            if (error.response) {
-                alert(error.response.data.message || error.response.data);
-            } else {
-                alert(error.message);
+            let errorMessage = "Registration failed. Please try again.";
+
+            if (error.response?.data) {
+                if (typeof error.response.data === "string") {
+                    errorMessage = error.response.data;
+                } else if (error.response.data.message) {
+                    errorMessage = error.response.data.message;
+                }
+            } else if (error.message) {
+                errorMessage = error.message;
             }
+
+            toast.error(errorMessage);
 
         } finally {
 

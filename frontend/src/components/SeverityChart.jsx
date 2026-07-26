@@ -120,9 +120,10 @@ function SeverityChart() {
               y="47%"
               textAnchor="middle"
               dominantBaseline="middle"
-              fill="#ffffff"
+              fill="var(--sc-text-primary)"
               fontSize="34"
               fontWeight="bold"
+              className="fill-slate-900 dark:fill-white font-bold"
             >
               {totalThreats}
             </text>
@@ -132,11 +133,13 @@ function SeverityChart() {
               y="60%"
               textAnchor="middle"
               dominantBaseline="middle"
-              fill="#94a3b8"
+              fill="var(--sc-text-secondary)"
               fontSize="18"
+              className="fill-slate-600 dark:fill-slate-400 font-semibold"
             >
               Threats
             </text>
+
 
           </PieChart>
 

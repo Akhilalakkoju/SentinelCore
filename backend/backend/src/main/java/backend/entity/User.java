@@ -1,6 +1,6 @@
 package backend.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties; // 👈 Add this import
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
 @Entity
@@ -22,17 +22,21 @@ public class User {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id")
-    // 👈 ADD THIS LINE: It breaks infinite serialization strings deep inside the Role mapping
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "users"}) 
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "users"})
     private Role role;
 
     @Column(nullable = false)
     private Boolean enabled = true;
 
+    @Column(length = 2000)
+    private String profileImage;
+
+    @Column(nullable = false)
+    private String theme = "dark";
+
     public User() {
     }
 
-    // ... Keep all your existing getters and setters exactly the same ...
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getName() { return name; }
@@ -45,4 +49,8 @@ public class User {
     public void setRole(Role role) { this.role = role; }
     public Boolean getEnabled() { return enabled; }
     public void setEnabled(Boolean enabled) { this.enabled = enabled; }
+    public String getProfileImage() { return profileImage; }
+    public void setProfileImage(String profileImage) { this.profileImage = profileImage; }
+    public String getTheme() { return theme; }
+    public void setTheme(String theme) { this.theme = theme; }
 }

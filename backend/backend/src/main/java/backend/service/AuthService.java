@@ -65,10 +65,19 @@ public class AuthService {
         );
     }
 
+    @Autowired
+    private SettingsService settingsService;
+
     // ===========================
     // REGISTER
     // ===========================
     public String register(RegisterRequest request) {
+
+        // Check password minimum length (default 8)
+        int minLength = 8;
+        if (request.getPassword() == null || request.getPassword().length() < minLength) {
+            throw new RuntimeException("Password must be at least " + minLength + " characters.");
+        }
 
         // Check if email already exists
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {

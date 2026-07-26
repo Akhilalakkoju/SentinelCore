@@ -252,15 +252,6 @@ function LandingPage() {
     }
   };
 
-  const handleLaunchDashboard = () => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      navigate("/dashboard");
-    } else {
-      navigate("/login");
-    }
-  };
-
   return (
     <div className="sc-landing-root">
       {/* Navigation */}
@@ -291,9 +282,6 @@ function LandingPage() {
             <Link to="/register" className="sc-btn sc-btn-accent sc-nav-auth-btn">
               <UserPlus size={16} /> Register
             </Link>
-            <button onClick={handleLaunchDashboard} className="sc-btn sc-btn-primary">
-              Dashboard
-            </button>
             <a 
               href="https://github.com" 
               target="_blank" 
@@ -330,9 +318,6 @@ function LandingPage() {
           <Link to="/register" onClick={() => setMobileMenuOpen(false)} className="sc-btn sc-btn-accent" style={{ width: "100%" }}>
             <UserPlus size={16} /> Register
           </Link>
-          <button onClick={() => { setMobileMenuOpen(false); handleLaunchDashboard(); }} className="sc-btn sc-btn-primary" style={{ width: "100%" }}>
-            Launch Dashboard
-          </button>
           <a 
             href="https://github.com" 
             target="_blank" 
@@ -365,7 +350,7 @@ function LandingPage() {
             </p>
             <div className="sc-hero-buttons">
               <button onClick={() => scrollToSection("features")} className="sc-btn sc-btn-primary">
-                Explore Dashboard <ArrowRight size={16} />
+                Explore Features <ArrowRight size={16} />
               </button>
               <button onClick={() => scrollToSection("architecture")} className="sc-btn sc-btn-outline">
                 View Architecture
@@ -610,9 +595,9 @@ function LandingPage() {
             Deploy automated artificial intelligence pipelines to monitor, isolate, and neutralize digital threats across your entire enterprise infrastructure today.
           </p>
           <div className="sc-cta-buttons">
-            <button onClick={handleLaunchDashboard} className="sc-btn sc-btn-primary">
-              Launch Dashboard <ArrowRight size={16} />
-            </button>
+            <Link to="/login" className="sc-btn sc-btn-primary">
+              Get Started <ArrowRight size={16} />
+            </Link>
             <a 
               href="mailto:support@sentinelcore.com" 
               className="sc-btn sc-btn-outline"

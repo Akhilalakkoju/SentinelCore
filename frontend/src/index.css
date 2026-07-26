@@ -1,5 +1,416 @@
 @import "tailwindcss";
 
+/* ============================== */
+/* Theme Variables                */
+/* ============================== */
+
+/* Default: Cyber Dark Glass */
+:root,
+.theme-cyber-dark {
+  --sc-bg-primary: #020617;
+  --sc-bg-secondary: #0f172a;
+  --sc-bg-card: #1e293b;
+  --sc-bg-nav: #0f172a;
+  --sc-border: #334155;
+  --sc-accent: #38bdf8;
+  --sc-accent-hover: #0ea5e9;
+  --sc-text-primary: #f1f5f9;
+  --sc-text-secondary: #94a3b8;
+}
+
+.theme-midnight-blue {
+  --sc-bg-primary: #0a0e27;
+  --sc-bg-secondary: #111b3d;
+  --sc-bg-card: #1a2550;
+  --sc-bg-nav: #0d1533;
+  --sc-border: #2a3a6b;
+  --sc-accent: #6366f1;
+  --sc-accent-hover: #818cf8;
+  --sc-text-primary: #e0e7ff;
+  --sc-text-secondary: #a5b4fc;
+}
+
+.theme-deep-slate {
+  --sc-bg-primary: #111111;
+  --sc-bg-secondary: #1a1a1a;
+  --sc-bg-card: #252525;
+  --sc-bg-nav: #171717;
+  --sc-border: #3a3a3a;
+  --sc-accent: #10b981;
+  --sc-accent-hover: #34d399;
+  --sc-text-primary: #e5e5e5;
+  --sc-text-secondary: #a3a3a3;
+}
+
+/* ========================================== */
+/* ENTERPRISE LIGHT MODE SYSTEM               */
+/* ========================================== */
+
+.light,
+.light-mode {
+  --sc-bg-primary: #f8fafc;
+  --sc-bg-secondary: #ffffff;
+  --sc-bg-card: #ffffff;
+  --sc-bg-nav: #ffffff;
+  --sc-border: #e2e8f0;
+  --sc-accent: #0284c7;
+  --sc-accent-hover: #0369a1;
+  --sc-text-primary: #0f172a;
+  --sc-text-secondary: #475569;
+  color-scheme: light;
+}
+
+/* Global Light Layout & Background */
+.light,
+.light-mode,
+.light body,
+.light-mode body,
+.light main,
+.light-mode main,
+.light .min-h-screen,
+.light-mode .min-h-screen,
+.light .bg-slate-955,
+.light-mode .bg-slate-955,
+.light .bg-slate-950,
+.light-mode .bg-slate-950 {
+  background-color: #f8fafc !important;
+  background-image: none !important;
+  color: #0f172a !important;
+}
+
+.light [class*="bg-[#081225]"],
+.light-mode [class*="bg-[#081225]"],
+.light [class*="bg-[#050B18]"],
+.light-mode [class*="bg-[#050B18]"],
+.light [class*="from-[#081225]"],
+.light-mode [class*="from-[#081225]"],
+.light [class*="to-[#050B18]"],
+.light-mode [class*="to-[#050B18]"] {
+  background-color: #f8fafc !important;
+  background-image: none !important;
+}
+
+.light main div.pointer-events-none,
+.light-mode main div.pointer-events-none,
+.light [class*="radial-gradient"],
+.light-mode [class*="radial-gradient"],
+.light [class*="linear-gradient"],
+.light-mode [class*="linear-gradient"] {
+  display: none !important;
+  opacity: 0 !important;
+}
+
+
+/* Navbar in Light Mode */
+.light nav.fixed,
+.light-mode nav.fixed {
+  background-color: #ffffff !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+.light nav.fixed h1,
+.light-mode nav.fixed h1 {
+  color: #0284c7 !important;
+}
+
+.light nav.fixed p,
+.light-mode nav.fixed p,
+.light nav.fixed span,
+.light-mode nav.fixed span,
+.light nav.fixed svg,
+.light-mode nav.fixed svg {
+  color: #334155 !important;
+}
+
+/* Sidebar in Light Mode */
+.light aside.fixed,
+.light-mode aside.fixed {
+  background-color: #ffffff !important;
+  border-right: 1px solid #e2e8f0 !important;
+  box-shadow: 1px 0 3px 0 rgba(0, 0, 0, 0.03) !important;
+}
+
+.light aside.fixed h1 span,
+.light-mode aside.fixed h1 span {
+  color: #0f172a !important;
+}
+
+.light aside.fixed button,
+.light-mode aside.fixed button {
+  color: #475569 !important;
+}
+
+.light aside.fixed button:hover,
+.light-mode aside.fixed button:hover {
+  background-color: #f1f5f9 !important;
+  color: #0284c7 !important;
+}
+
+.light aside.fixed .border-slate-800,
+.light-mode aside.fixed .border-slate-800 {
+  border-color: #e2e8f0 !important;
+}
+
+/* Card Containers & Panels in Light Mode */
+.light .bg-slate-950,
+.light .bg-slate-950,
+.light-mode .bg-slate-950,
+.light .bg-slate-900,
+.light-mode .bg-slate-900,
+.light .bg-slate-900\/50,
+.light-mode .bg-slate-900\/50,
+.light .bg-slate-900\/60,
+.light-mode .bg-slate-900\/60,
+.light .bg-slate-900\/80,
+.light-mode .bg-slate-900\/80,
+.light .bg-slate-900\/90,
+.light-mode .bg-slate-900\/90,
+.light .bg-slate-800,
+.light-mode .bg-slate-800,
+.light .bg-white\/5,
+.light-mode .bg-white\/5 {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.03) !important;
+}
+
+/* Inset Code & Trigger Containers in Light Mode */
+.light .bg-slate-950\/60,
+.light-mode .bg-slate-950\/60,
+.light .bg-slate-950\/80,
+.light-mode .bg-slate-950\/80,
+.light .bg-slate-950\/90,
+.light-mode .bg-slate-950\/90 {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: inset 0 1px 3px 0 rgba(0, 0, 0, 0.04) !important;
+}
+
+
+/* Tab Bar Pill Container in Light Mode */
+.light .bg-slate-900\/70,
+.light-mode .bg-slate-900\/70,
+.light .bg-slate-900\/75,
+.light-mode .bg-slate-900\/75 {
+  background-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Inactive Tab Text Contrast in Light Mode */
+.light .text-slate-400,
+.light-mode .text-slate-400 {
+  color: #1e293b !important;
+}
+
+.light button.text-slate-400:hover,
+.light-mode button.text-slate-400:hover {
+  color: #0284c7 !important;
+  background-color: #cbd5e1 !important;
+}
+
+
+/* Typography Overrides in Light Mode */
+.light .text-white,
+.light-mode .text-white,
+.light .text-slate-100,
+.light-mode .text-slate-100,
+.light .text-slate-200,
+.light-mode .text-slate-200 {
+  color: #0f172a !important;
+}
+
+.light .text-slate-300,
+.light-mode .text-slate-300,
+.light .text-slate-400,
+.light-mode .text-slate-400 {
+  color: #475569 !important;
+}
+
+.light .text-slate-500,
+.light-mode .text-slate-500 {
+  color: #64748b !important;
+}
+
+/* Form Controls in Light Mode */
+.light input,
+.light-mode input,
+.light select,
+.light-mode select,
+.light textarea,
+.light-mode textarea {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+.light input:focus,
+.light-mode input:focus,
+.light select:focus,
+.light-mode select:focus,
+.light textarea:focus,
+.light-mode textarea:focus {
+  border-color: #0284c7 !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+}
+
+/* Border Overrides in Light Mode */
+.light .border-slate-800,
+.light-mode .border-slate-800,
+.light .border-slate-700,
+.light-mode .border-slate-700,
+.light .border-white\/10,
+.light-mode .border-white\/10 {
+  border-color: #e2e8f0 !important;
+}
+
+/* Reset & Secondary Buttons in Light Mode */
+.light .bg-slate-700,
+.light-mode .bg-slate-700,
+.light .bg-slate-800,
+.light-mode .bg-slate-800,
+.light .bg-slate-700\/80,
+.light-mode .bg-slate-700\/80,
+.light .bg-slate-800\/80,
+.light-mode .bg-slate-800\/80 {
+  background-color: #e2e8f0 !important;
+  color: #1e293b !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+.light .bg-slate-700:hover,
+.light-mode .bg-slate-700:hover,
+.light .bg-slate-800:hover,
+.light-mode .bg-slate-800:hover,
+.light .hover\:bg-slate-600:hover,
+.light-mode .hover\:bg-slate-600:hover {
+  background-color: #cbd5e1 !important;
+  color: #0284c7 !important;
+}
+
+/* SVG Chart & Text Contrast in Light Mode */
+.light svg text,
+.light-mode svg text {
+  fill: #0f172a !important;
+}
+
+.light svg text[fill="#ffffff"],
+.light-mode svg text[fill="#ffffff"] {
+  fill: #0f172a !important;
+}
+
+.light svg text[fill="#94a3b8"],
+.light-mode svg text[fill="#94a3b8"] {
+  fill: #475569 !important;
+}
+
+/* Canvas / Cyber Grid Overlay in Light Mode */
+.light canvas,
+.light-mode canvas {
+  opacity: 0.15 !important;
+}
+
+/* =========================================================
+   REPORTS MODULE LIGHT THEME OVERRIDES
+   ========================================================= */
+.light main.bg-\[\#081225\],
+.light-mode main.bg-\[\#081225\] {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+.light .bg-\[\#111B2E\],
+.light-mode .bg-\[\#111B2E\] {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03) !important;
+}
+
+.light .bg-\[\#15223b\]\/30,
+.light-mode .bg-\[\#15223b\]\/30 {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+.light .bg-\[\#243247\],
+.light-mode .bg-\[\#243247\] {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+.light .bg-\[\#243247\]:hover,
+.light-mode .bg-\[\#243247\]:hover {
+  background-color: #e2e8f0 !important;
+}
+
+.light main h1,
+.light-mode main h1,
+.light main h2,
+.light-mode main h2,
+.light main h3,
+.light-mode main h3,
+.light main h4,
+.light-mode main h4 {
+  color: #0f172a !important;
+}
+
+.light main .text-white,
+.light-mode main .text-white,
+.light .bg-\[\#111B2E\] .text-white,
+.light-mode .bg-\[\#111B2E\] .text-white {
+  color: #0f172a !important;
+}
+
+
+.light .border-white\/5,
+.light-mode .border-white\/5,
+.light .border-white\/8,
+.light-mode .border-white\/8,
+.light .border-white\/10,
+.light-mode .border-white\/10 {
+  border-color: #e2e8f0 !important;
+}
+
+.light .bg-white\/5,
+.light-mode .bg-white\/5 {
+  background-color: #f1f5f9 !important;
+}
+
+
+
+
+/* Apply theme variables to core elements */
+body {
+  background-color: var(--sc-bg-primary);
+  color: var(--sc-text-primary);
+  transition: background-color 0.4s ease, color 0.3s ease;
+}
+
+/* Navbar theme integration */
+nav.fixed {
+  background-color: var(--sc-bg-nav) !important;
+  border-bottom: 1px solid var(--sc-border);
+  transition: background-color 0.4s ease;
+}
+
+/* Sidebar theme integration */
+aside.fixed {
+  background-color: var(--sc-bg-nav) !important;
+  border-right-color: var(--sc-border) !important;
+  transition: background-color 0.4s ease;
+}
+
+/* Compact view styles */
+.compact-table th,
+.compact-table td {
+  padding: 4px 8px !important;
+  font-size: 0.8rem !important;
+}
+
 /* Hide scrollbar for Chrome, Safari and Opera (globally) */
 *::-webkit-scrollbar {
   display: none !important;
