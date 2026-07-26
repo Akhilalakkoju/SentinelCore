@@ -24,10 +24,14 @@ import { useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { getCurrentRole } from "../services/auth";
+import { useSettings } from "../context/SettingsContext";
 
 function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { settings } = useSettings();
+
+
   const role = getCurrentRole();
 
   const scrollContainerRef = useRef(null);
@@ -153,6 +157,12 @@ function Sidebar() {
       path: "/new-reports",
       roles: ["ADMIN", "ANALYST"],
     },
+    {
+      title: "Settings",
+      icon: <FaCog />,
+      path: "/settings",
+      roles: ["ADMIN", "ANALYST", "VIEWER"],
+    },
   ];
 
   return (
@@ -162,12 +172,13 @@ function Sidebar() {
 
         <h1 className="text-white font-bold text-lg tracking-wider flex items-center gap-2">
           <FaShieldAlt className="text-sky-500 shrink-0" />
-          <span>SENTINEL CORE</span>
+          <span className="uppercase">{settings.organizationName || settings.platformName || "SENTINEL CORE"}</span>
         </h1>
 
         <p className="text-slate-400 text-sm mt-2">
-          Role-based security operations
+          {settings.timezone ? `Timezone: ${settings.timezone}` : "Role-based security operations"}
         </p>
+
 
       </div>
 
@@ -231,17 +242,17 @@ function Sidebar() {
         <div className="flex items-center gap-3">
 
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-sky-400 to-blue-500 text-white flex items-center justify-center font-bold text-sm shadow-lg shadow-sky-500/20">
-            {role ? role.charAt(0) : "U"}
+            {settings.userName ? settings.userName.charAt(0).toUpperCase() : (role ? role.charAt(0) : "U")}
           </div>
 
           <div className="flex-1 min-w-0">
 
-            <p className="text-slate-300 text-xs font-semibold uppercase tracking-wider">
-              System Access
+            <p className="text-slate-300 text-xs font-semibold truncate">
+              {settings.userName || "System Access"}
             </p>
 
             <p className="text-slate-500 text-[10px] mt-0.5 truncate">
-              {localStorage.getItem("email") || "guest@sentinelcore.local"}
+              {settings.userEmail || localStorage.getItem("email") || "guest@sentinelcore.local"}
             </p>
 
           </div>
@@ -251,6 +262,7 @@ function Sidebar() {
         <p className="text-slate-500 text-xs mt-3">
           Signed in as: {role}
         </p>
+
 
       </div>
 

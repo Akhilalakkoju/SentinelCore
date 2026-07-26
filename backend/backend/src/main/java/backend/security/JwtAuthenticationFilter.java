@@ -33,8 +33,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String path = request.getServletPath();
 
-        // Allow WebSocket handshake without JWT
-        if (path.startsWith("/ws")) {
+        // Allow public auth endpoints and WebSocket without JWT processing
+        if (path.startsWith("/api/auth") || path.startsWith("/ws")) {
             filterChain.doFilter(request, response);
             return;
         }

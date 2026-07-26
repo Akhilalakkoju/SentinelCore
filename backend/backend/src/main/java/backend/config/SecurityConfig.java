@@ -12,7 +12,10 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
     @Autowired
@@ -205,6 +208,24 @@ public class SecurityConfig {
                         // ===========================
                         .requestMatchers("/api/reports/**")
                         .hasAnyRole("ADMIN", "ANALYST", "VIEWER", "MANAGER")
+
+                        // ===========================
+                        // Profile
+                        // ===========================
+                        .requestMatchers("/api/profile/**")
+                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER")
+
+                        // ===========================
+                        // Settings
+                        // ===========================
+                        .requestMatchers(HttpMethod.GET, "/api/settings/**")
+                        .permitAll()
+
+                        .requestMatchers(HttpMethod.PUT, "/api/settings/**")
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.POST, "/api/settings/**")
+                        .hasRole("ADMIN")
 
                         // ===========================
                         // Allow OPTIONS

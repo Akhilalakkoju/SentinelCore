@@ -18,6 +18,7 @@ export const NotificationProvider = ({ children }) => {
         try {
 
             const token = localStorage.getItem("token");
+            if (!token) return;
 
             const response = await axios.get(
                 "http://localhost:8080/api/notifications",
@@ -39,57 +40,56 @@ export const NotificationProvider = ({ children }) => {
     };
 
     useEffect(() => {
+        const token = localStorage.getItem("token");
 
-        // Load existing notifications
-        loadNotifications();
-
-        // Polling every 3 seconds for new playbook/incident notifications
-        const interval = setInterval(loadNotifications, 3000);
-
-        // Connect WebSocket
-        connectWebSocket((alert) => {
-
-            toast.success(
-                <>
-                    <div className="font-bold text-base">
-                        🚨 {alert.title}
-                    </div>
-
-                    <div className="mt-1">
-                        <strong>Severity:</strong> {alert.severity}
-                    </div>
-
-                    <div className="mt-1">
-                        <strong>Status:</strong> {alert.status}
-                    </div>
-
-                    <div className="mt-2 text-sm">
-                        {alert.message}
-                    </div>
-                </>,
-                {
-                    position: "top-right",
-                    autoClose: 5000,
-                    hideProgressBar: false,
-                    closeOnClick: true,
-                    pauseOnHover: true,
-                    draggable: true,
-                    theme: "dark"
-                }
-            );
-
-            // Refresh notifications
+        if (token) {
             loadNotifications();
 
-        });
+            // Polling every 3 seconds for new playbook/incident notifications
+            const interval = setInterval(loadNotifications, 3000);
 
-        return () => {
-            clearInterval(interval);
-            disconnectWebSocket();
+            // Connect WebSocket
+            connectWebSocket((alert) => {
+                toast.success(
+                    <>
+                        <div className="font-bold text-base">
+                            🚨 {alert.title}
+                        </div>
 
-        };
+                        <div className="mt-1">
+                            <strong>Severity:</strong> {alert.severity}
+                        </div>
 
+                        <div className="mt-1">
+                            <strong>Status:</strong> {alert.status}
+                        </div>
+
+                        <div className="mt-2 text-sm">
+                            {alert.message}
+                        </div>
+                    </>,
+                    {
+                        position: "top-right",
+                        autoClose: 5000,
+                        hideProgressBar: false,
+                        closeOnClick: true,
+                        pauseOnHover: true,
+                        draggable: true,
+                        theme: "dark"
+                    }
+                );
+
+                // Refresh notifications
+                loadNotifications();
+            });
+
+            return () => {
+                clearInterval(interval);
+                disconnectWebSocket();
+            };
+        }
     }, []);
+
 
     const unreadCount =
         notifications.filter(n => !n.readStatus).length;
@@ -99,6 +99,7 @@ export const NotificationProvider = ({ children }) => {
         try {
 
             const token = localStorage.getItem("token");
+            if (!token) return;
 
             await axios.put(
                 "http://localhost:8080/api/notifications/read-all",
@@ -125,6 +126,7 @@ export const NotificationProvider = ({ children }) => {
         try {
 
             const token = localStorage.getItem("token");
+            if (!token) return;
 
             await axios.delete(
                 "http://localhost:8080/api/notifications",

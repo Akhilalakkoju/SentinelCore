@@ -178,7 +178,7 @@ function PlaybookList() {
               className={`flex items-center gap-2 px-6 py-3 font-semibold text-sm border-b-2 transition-all duration-300 outline-none ${
                 activeTab === "templates"
                   ? "border-sky-500 text-sky-400 font-bold"
-                  : "border-transparent text-slate-400 hover:text-white"
+                  : "border-transparent text-slate-400 hover:text-sky-500"
               }`}
             >
               <FaCog /> Playbook Templates
@@ -191,7 +191,7 @@ function PlaybookList() {
               className={`flex items-center gap-2 px-6 py-3 font-semibold text-sm border-b-2 transition-all duration-300 outline-none ${
                 activeTab === "history"
                   ? "border-sky-500 text-sky-400 font-bold"
-                  : "border-transparent text-slate-400 hover:text-white"
+                  : "border-transparent text-slate-400 hover:text-sky-500"
               }`}
             >
               <FaHistory /> Execution History
@@ -228,20 +228,20 @@ function PlaybookList() {
                   <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 mb-4 text-xs space-y-2">
                     <div>
                       <span className="text-slate-500 font-semibold uppercase">Trigger On:</span>{" "}
-                      <span className="text-sky-300 font-mono font-bold bg-sky-500/10 border border-sky-500/20 px-2 py-0.5 rounded ml-1">
+                      <span className="text-sky-400 dark:text-sky-300 font-mono font-bold bg-sky-500/10 border border-sky-500/20 px-2 py-0.5 rounded ml-1">
                         {playbook.triggerType}
                       </span>
                       {playbook.triggerValue && (
                         <>
-                          <span className="text-slate-500 ml-3">Value:</span>{" "}
-                          <span className="text-emerald-400 font-bold ml-1">{playbook.triggerValue}</span>
+                          <span className="text-slate-500 font-semibold ml-3 uppercase">Value:</span>{" "}
+                          <span className="text-emerald-600 dark:text-emerald-400 font-bold ml-1">{playbook.triggerValue}</span>
                         </>
                       )}
                     </div>
                     {playbook.conditionsJson && playbook.conditionsJson !== "{}" && (
                       <div className="truncate">
                         <span className="text-slate-500 font-semibold uppercase">Conditions:</span>{" "}
-                        <span className="text-slate-400 font-mono ml-1">{playbook.conditionsJson}</span>
+                        <span className="text-slate-600 dark:text-slate-400 font-mono ml-1">{playbook.conditionsJson}</span>
                       </div>
                     )}
                   </div>

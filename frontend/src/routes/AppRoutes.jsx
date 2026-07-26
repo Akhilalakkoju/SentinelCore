@@ -40,6 +40,7 @@ import PlaybookList from "../pages/PlaybookList";
 import PlaybookExecutionDetail from "../pages/PlaybookExecutionDetail";
 
 import AuditLogs from "../pages/AuditLogs";
+import Settings from "../pages/Settings";
 
 import AssetDashboard from "../pages/AssetDashboard";
 import AssetList from "../pages/AssetList";
@@ -253,6 +254,16 @@ function AppRoutes() {
                     element={protect(
                         <AuditLogs />,
                         ["ADMIN", "ANALYST"]
+                    )}
+                />
+
+                {/* Settings */}
+
+                <Route
+                    path="/settings"
+                    element={protect(
+                        <Settings />,
+                        ["ADMIN", "ANALYST", "VIEWER"]
                     )}
                 />
 
