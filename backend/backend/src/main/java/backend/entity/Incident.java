@@ -3,6 +3,8 @@ package backend.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.ArrayList;
 
 @Entity
 @Table(name = "incidents")
@@ -11,10 +13,12 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Incident {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     @Column(nullable = false)
@@ -43,11 +47,24 @@ public class Incident {
     @JoinColumn(name = "assigned_to_id")
     private User assignedTo;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "asset_id")
+    private Asset asset;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "incident_kb_articles",
+        joinColumns = @JoinColumn(name = "incident_id"),
+        inverseJoinColumns = @JoinColumn(name = "kb_article_id")
+    )
+    @Builder.Default
+    private List<KnowledgeBaseArticle> kbArticles = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {

@@ -13,19 +13,35 @@ import {
   FaBug,
   FaClipboardList,
   FaBookOpen,
+  FaBook,
   FaHistory,
+  FaEnvelopeOpen,
+  FaServer,
+  FaLaptop,
 } from "react-icons/fa";
 
+import { useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { getCurrentRole } from "../services/auth";
 
 function Sidebar() {
-
   const navigate = useNavigate();
   const location = useLocation();
-
   const role = getCurrentRole();
+
+  const scrollContainerRef = useRef(null);
+
+  useEffect(() => {
+    const savedScroll = sessionStorage.getItem("sidebar-scroll");
+    if (savedScroll && scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = parseInt(savedScroll, 10);
+    }
+  }, []);
+
+  const handleScroll = (e) => {
+    sessionStorage.setItem("sidebar-scroll", e.target.scrollTop);
+  };
 
   const menu = [
     {
@@ -95,9 +111,24 @@ function Sidebar() {
       path: "/playbooks",
     },
     {
+      title: "Knowledge Base",
+      icon: <FaBook />,
+      path: "/knowledge-base",
+    },
+    {
       title: "Vulnerabilities",
       icon: <FaBug />,
       path: "/vulnerabilities",
+    },
+    {
+      title: "Asset Dashboard",
+      icon: <FaServer />,
+      path: "/assets/dashboard",
+    },
+    {
+      title: "Asset Inventory",
+      icon: <FaLaptop />,
+      path: "/assets",
     },
     {
       title: "Audit Logs",
@@ -140,7 +171,11 @@ function Sidebar() {
 
       </div>
 
-      <div className="flex-1 mt-5 px-3 pb-6 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800">
+      <div 
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 mt-5 px-3 pb-6 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800"
+      >
 
         {menu
           .filter((item) => !item.roles || item.roles.includes(role))

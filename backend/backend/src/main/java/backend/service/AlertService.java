@@ -1,8 +1,12 @@
 package backend.service;
 
 import backend.entity.Alert;
+import backend.entity.User;
 import backend.repository.AlertRepository;
+import backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,6 +17,24 @@ public class AlertService {
 
     @Autowired
     private AlertRepository alertRepository;
+
+    @Autowired
+    private AuditLogService auditLogService;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private PlaybookService playbookService;
+
+    private User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+        String email = authentication.getName();
+        return userRepository.findByEmail(email).orElse(null);
+    }
 
     // Get All Alerts
     public List<Alert> getAllAlerts() {
@@ -26,7 +48,23 @@ public class AlertService {
 
     // Add Alert
     public Alert addAlert(Alert alert) {
-        return alertRepository.save(alert);
+        if (alert.getStatus() == null) {
+            alert.setStatus("Open");
+        }
+        Alert saved = alertRepository.save(alert);
+        auditLogService.createLog("CREATE_ALERT", "New alert created: " + saved.getTitle() + " (Severity: " + saved.getSeverity() + ")", getCurrentUser(), null);
+
+        if (saved.getTitle() != null && 
+            (saved.getTitle().toLowerCase().contains("phishing") || 
+             "Phishing Simulator".equalsIgnoreCase(saved.getSource()) || 
+             "Email Gateway".equalsIgnoreCase(saved.getSource()))) {
+            try {
+                playbookService.triggerPhishingPlaybook(saved);
+            } catch (Exception e) {
+                System.err.println("Failed to trigger phishing playbook automatically: " + e.getMessage());
+            }
+        }
+        return saved;
     }
 
     // Update Alert
@@ -42,7 +80,9 @@ public class AlertService {
             alert.setStatus(updatedAlert.getStatus());
             alert.setDescription(updatedAlert.getDescription());
 
-            return alertRepository.save(alert);
+            Alert saved = alertRepository.save(alert);
+            auditLogService.createLog("UPDATE_ALERT", "Alert updated: " + saved.getTitle() + " (Status: " + saved.getStatus() + ")", getCurrentUser(), null);
+            return saved;
         }
 
         return null;
@@ -50,7 +90,11 @@ public class AlertService {
 
     // Delete Alert
     public void deleteAlert(Long id) {
-        alertRepository.deleteById(id);
+        Alert alert = alertRepository.findById(id).orElse(null);
+        if (alert != null) {
+            alertRepository.delete(alert);
+            auditLogService.createLog("DELETE_ALERT", "Alert deleted: " + alert.getTitle(), getCurrentUser(), null);
+        }
     }
 
     public Alert updateStatus(Long id, String status) {
@@ -58,8 +102,15 @@ public class AlertService {
         Alert alert = alertRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Alert not found"));
 
+        String oldStatus = alert.getStatus();
         alert.setStatus(status);
 
-        return alertRepository.save(alert);
+        Alert saved = alertRepository.save(alert);
+        auditLogService.createLog("UPDATE_ALERT", "Alert status updated from " + oldStatus + " to " + status + " for " + saved.getTitle(), getCurrentUser(), null);
+        return saved;
+    }
+
+    public List<Alert> getAlertsByAsset(Long assetId) {
+        return alertRepository.findByAssetId(assetId);
     }
 }

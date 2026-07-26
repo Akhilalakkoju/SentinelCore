@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaPlay, FaTrash, FaPlus, FaTimes, FaShieldAlt, FaArrowUp, FaCheck, FaClock, FaEdit } from "react-icons/fa";
+import { toast } from "react-toastify";
+import { FaPlay, FaTrash, FaPlus, FaTimes, FaShieldAlt, FaArrowUp, FaCheck, FaClock, FaEdit, FaUndo, FaLink, FaHistory } from "react-icons/fa";
 
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
@@ -12,6 +13,7 @@ import TableContainer from "../components/ui/TableContainer";
 
 import incidentService from "../services/incidentService";
 import playbookService from "../services/playbookService";
+import kbService from "../services/kbService";
 import api from "../services/api";
 import { getCurrentRole } from "../services/auth";
 
@@ -63,25 +65,25 @@ const getPlaybookRelation = (playbook, incident) => {
   const incWords = getCleanWords(incident.title).concat(getCleanWords(incident.description));
 
   const isVulnIncident = incWords.some(w => wordsMatchFuzzy("vulnerability", w)) || incWords.some(w => wordsMatchFuzzy("scan", w));
-  const isMalwareIncident = incWords.some(w => wordsMatchFuzzy("malware", w));
+  const isLocationIncident = incWords.some(w => wordsMatchFuzzy("location", w) || wordsMatchFuzzy("login", w) || wordsMatchFuzzy("unauthorized", w) || wordsMatchFuzzy("geoip", w));
   const isBruteForceIncident = incWords.some(w => wordsMatchFuzzy("brute", w));
   const isPrivEscIncident = incWords.some(w => wordsMatchFuzzy("privilege", w));
 
   const isVulnPlaybook = pbName.includes("vulnerability") || pbName.includes("scan");
-  const isMalwarePlaybook = pbName.includes("malware");
+  const isLocationPlaybook = pbName.includes("location") || pbName.includes("unauthorized") || pbName.includes("login");
   const isBruteForcePlaybook = pbName.includes("brute");
   const isPrivEscPlaybook = pbName.includes("privilege");
 
   // Recommended matching
-  if (isMalwareIncident && isMalwarePlaybook) return "RECOMMENDED";
+  if (isLocationIncident && isLocationPlaybook) return "RECOMMENDED";
   if (isBruteForceIncident && isBruteForcePlaybook) return "RECOMMENDED";
   if (isPrivEscIncident && isPrivEscPlaybook) return "RECOMMENDED";
-  if (isVulnIncident && isVulnPlaybook && !isMalwareIncident && !isBruteForceIncident && !isPrivEscIncident) {
+  if (isVulnIncident && isVulnPlaybook && !isLocationIncident && !isBruteForceIncident && !isPrivEscIncident) {
     return "RECOMMENDED";
   }
 
-  // Secondary matching (Vulnerability scan is secondary for Malware, Brute Force, and Privilege Escalation)
-  if (isVulnPlaybook && (isMalwareIncident || isBruteForceIncident || isPrivEscIncident)) {
+  // Secondary matching (Vulnerability scan is secondary for Location, Brute Force, and Privilege Escalation)
+  if (isVulnPlaybook && (isLocationIncident || isBruteForceIncident || isPrivEscIncident)) {
     return "SECONDARY";
   }
 
@@ -247,6 +249,73 @@ function IncidentList() {
     });
   };
 
+  // Incident Details Modal State & Handlers
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [detailedIncident, setDetailedIncident] = useState(null);
+  const [allArticles, setAllArticles] = useState([]);
+  const [selectedArticleIdToLink, setSelectedArticleIdToLink] = useState("");
+  const [activityLogs, setActivityLogs] = useState([]);
+
+  const openDetailsModal = async (incident) => {
+    try {
+      const fullDetails = await incidentService.getIncidentById(incident.id);
+      setDetailedIncident(fullDetails);
+      setIsDetailsModalOpen(true);
+
+      // Fetch incident activity logs
+      try {
+        const logResponse = await api.get(`/audit/incident/${incident.id}`);
+        const sorted = (logResponse.data || []).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        setActivityLogs(sorted);
+      } catch (logErr) {
+        console.error("Failed to load incident activity logs", logErr);
+      }
+
+      // Fetch articles for selection
+      const articlesData = await kbService.getArticles();
+      setAllArticles(articlesData);
+    } catch (error) {
+      console.error("Failed to load incident details", error);
+      toast.error("Failed to load incident details");
+    }
+  };
+
+  const handleDetailsLinkArticle = async () => {
+    if (!selectedArticleIdToLink || !detailedIncident) return;
+    try {
+      const updated = await incidentService.linkKbArticle(detailedIncident.id, selectedArticleIdToLink);
+      setDetailedIncident(updated);
+      setSelectedArticleIdToLink("");
+      toast.success("Article linked to incident successfully!");
+      fetchIncidents(); // Refresh main list to show updated counts/data
+    } catch (error) {
+      console.error("Failed to link article", error);
+      toast.error("Failed to link article to incident");
+    }
+  };
+
+  const handleDetailsUnlinkArticle = async (articleId) => {
+    if (!window.confirm("Are you sure you want to unlink this documentation?")) return;
+    try {
+      const updated = await incidentService.unlinkKbArticle(detailedIncident.id, articleId);
+      setDetailedIncident(updated);
+      toast.success("Article unlinked successfully!");
+      fetchIncidents(); // Refresh main list
+    } catch (error) {
+      console.error("Failed to unlink article", error);
+      toast.error("Failed to unlink article");
+    }
+  };
+
+  const navigateToCreatePir = (incident) => {
+    navigate("/knowledge-base", {
+      state: {
+        createPir: true,
+        incident: incident
+      }
+    });
+  };
+
   const handleEditClick = (incident) => {
     setEditingId(incident.id);
     setNewIncident({
@@ -312,6 +381,18 @@ function IncidentList() {
     } catch (error) {
       console.error("Failed to delete incident", error);
       alert("Error deleting incident ticket.");
+    }
+  };
+
+  const handleResetSystem = async () => {
+    if (!window.confirm("Are you sure you want to reset all incidents and clear all playbook execution logs? This cannot be undone.")) return;
+    try {
+      await api.post("/incidents/reset");
+      alert("System state has been reset successfully!");
+      fetchIncidents();
+    } catch (error) {
+      console.error("Failed to reset system state", error);
+      alert("Failed to reset system state.");
     }
   };
 
@@ -444,16 +525,28 @@ function IncidentList() {
               title="Incident Management"
               subtitle="Track security alerts, assign task responsibilities, and launch response workflows."
             />
-            {canWrite && (
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setIsCreateModalOpen(true)}
-                className="flex items-center gap-2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white px-5 py-3 rounded-xl font-semibold shadow-lg shadow-sky-500/25 transition-all duration-300"
-              >
-                <FaPlus className="text-sm" /> Create Incident
-              </motion.button>
-            )}
+            <div className="flex items-center gap-3">
+              {isAdmin && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleResetSystem}
+                  className="flex items-center gap-2 bg-slate-900/85 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white px-5 py-3 rounded-xl font-semibold shadow-lg transition-all duration-300"
+                >
+                  <FaUndo className="text-xs" /> Reset System
+                </motion.button>
+              )}
+              {canWrite && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="flex items-center gap-2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white px-5 py-3 rounded-xl font-semibold shadow-lg shadow-sky-500/25 transition-all duration-300"
+                >
+                  <FaPlus className="text-sm" /> Create Incident
+                </motion.button>
+              )}
+            </div>
           </div>
 
           {/* Search & Filters */}
@@ -519,9 +612,9 @@ function IncidentList() {
                       transition={{ delay: index * 0.03 }}
                       className="text-slate-300 hover:bg-slate-900/40 transition-all duration-300"
                     >
-                      <td className="p-4 text-center text-slate-500 font-mono">#{incident.id}</td>
+                      <td className="p-4 text-center text-slate-500 font-mono cursor-pointer hover:text-sky-400 font-bold transition" onClick={() => navigate(`/incidents/${incident.id}`)}>#{incident.id}</td>
                       <td className="p-4">
-                        <div className="font-semibold text-white flex items-center gap-2">
+                        <div className="font-semibold text-white flex items-center gap-2 cursor-pointer hover:text-sky-400 transition" onClick={() => openDetailsModal(incident)}>
                           {incident.title}
                           {incident.escalated && (
                             <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
@@ -928,6 +1021,231 @@ function IncidentList() {
                   </button>
                 </div>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* INCIDENT DETAILS & KB ARTICLE LINKING MODAL */}
+      <AnimatePresence>
+        {isDetailsModalOpen && detailedIncident && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsDetailsModalOpen(false)}
+              className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+            />
+
+            {/* Modal Body */}
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl relative z-10 text-white flex flex-col max-h-[90vh]"
+            >
+              {/* Header */}
+              <div className="p-6 border-b border-slate-800 flex justify-between items-start shrink-0">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-500 font-mono text-sm">Incident #{detailedIncident.id}</span>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${getStatusColor(detailedIncident.status)}`}>
+                      {detailedIncident.status}
+                    </span>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${getSeverityColor(detailedIncident.severity)}`}>
+                      {detailedIncident.severity}
+                    </span>
+                  </div>
+                  <h3 className="text-xl font-bold text-white leading-tight">
+                    {detailedIncident.title}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setIsDetailsModalOpen(false)}
+                  className="text-slate-400 hover:text-white"
+                >
+                  <FaTimes />
+                </button>
+              </div>
+
+              {/* Body Content */}
+              <div className="p-6 overflow-y-auto space-y-6 flex-1 scrollbar-thin scrollbar-thumb-slate-850">
+                
+                {/* Description */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Description</h4>
+                  <p className="text-sm text-slate-300 bg-slate-950/40 p-4 rounded-2xl border border-slate-850 leading-relaxed whitespace-pre-wrap break-words">
+                    {detailedIncident.description || "No description provided for this incident."}
+                  </p>
+                </div>
+
+                {/* Grid Info */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="bg-slate-950/20 p-3 rounded-2xl border border-slate-850">
+                    <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Priority</span>
+                    <span className="text-sm font-semibold font-mono text-slate-300 mt-1 block">
+                      {detailedIncident.priority || "P3"}
+                    </span>
+                  </div>
+
+                  <div className="bg-slate-950/20 p-3 rounded-2xl border border-slate-850">
+                    <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">SLA Status</span>
+                    <div className="mt-1 block">
+                      <SlaTimer deadline={detailedIncident.slaDeadline} status={detailedIncident.status} />
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-950/20 p-3 rounded-2xl border border-slate-850">
+                    <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Source</span>
+                    <span className="text-sm font-semibold text-slate-300 mt-1 block truncate">
+                      {detailedIncident.source}
+                    </span>
+                  </div>
+
+                  <div className="bg-slate-950/20 p-3 rounded-2xl border border-slate-850">
+                    <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Assignee</span>
+                    <span className="text-sm font-semibold text-slate-300 mt-1 block truncate">
+                      {detailedIncident.assignedToName || "Unassigned"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Knowledge Base Articles Integration */}
+                <div className="space-y-4 pt-4 border-t border-slate-800">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <FaLink /> Linked Knowledge Base Articles
+                    </h4>
+
+                    {/* Post-Incident Review generation button */}
+                    {isAdmin && ["RESOLVED", "CLOSED"].includes(String(detailedIncident.status).toUpperCase()) && 
+                      !(detailedIncident.linkedArticles && detailedIncident.linkedArticles.some(a => a.type === "POST_INCIDENT_REVIEW")) && (
+                      <button
+                        onClick={() => {
+                          setIsDetailsModalOpen(false);
+                          navigateToCreatePir(detailedIncident);
+                        }}
+                        className="text-[10px] font-bold bg-amber-500/10 hover:bg-amber-500 text-amber-400 hover:text-white px-3 py-1.5 rounded-lg border border-amber-500/25 transition-all duration-300 flex items-center gap-1"
+                      >
+                        <FaPlus className="text-[8px]" /> Generate Post-Incident Review
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Dropdown to link new articles */}
+                  {isAdmin && (
+                    <div className="flex gap-2 bg-slate-950/60 p-3.5 rounded-2xl border border-slate-850">
+                      <div className="flex-1">
+                        <select
+                          value={selectedArticleIdToLink}
+                          onChange={(e) => setSelectedArticleIdToLink(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-xs text-white focus:border-sky-400 outline-none"
+                        >
+                          <option value="">-- Associate a Runbook or Detection Rule --</option>
+                          {allArticles
+                            .filter(art => !detailedIncident.linkedArticles?.some(la => la.id === art.id))
+                            .map(art => (
+                              <option key={art.id} value={art.id}>
+                                {art.title} ({art.type === 'RUNBOOK' ? 'Runbooks' : art.type === 'POST_INCIDENT_REVIEW' ? 'PIRs' : 'Rules'})
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                      <button
+                        onClick={handleDetailsLinkArticle}
+                        disabled={!selectedArticleIdToLink}
+                        className="bg-sky-500 hover:bg-sky-400 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1 shadow-md shadow-sky-500/10 transition"
+                      >
+                        Link
+                      </button>
+                    </div>
+                  )}
+
+                  {/* List linked articles */}
+                  {detailedIncident.linkedArticles && detailedIncident.linkedArticles.length > 0 ? (
+                    <div className="border border-slate-800 rounded-2xl overflow-hidden divide-y divide-slate-800 bg-slate-950/20">
+                      {detailedIncident.linkedArticles.map((art) => (
+                        <div key={art.id} className="p-3.5 flex justify-between items-center hover:bg-slate-900/10 transition-all">
+                          <div className="flex flex-col gap-1">
+                            <button
+                              onClick={() => {
+                                setIsDetailsModalOpen(false);
+                                navigate("/knowledge-base", { state: { selectedArticleId: art.id } });
+                              }}
+                              className="text-xs font-bold text-sky-400 hover:text-sky-300 hover:underline text-left flex items-center gap-1.5"
+                            >
+                              {art.title} <FaExternalLinkAlt className="text-[9px] text-slate-500" />
+                            </button>
+                            <span className="text-[9px] font-mono text-slate-500 uppercase">
+                              Type: {art.type === 'RUNBOOK' ? 'Runbooks' : art.type === 'POST_INCIDENT_REVIEW' ? 'PIRs' : 'Rules'} | version: v{art.version}
+                            </span>
+                          </div>
+
+                          {isAdmin && (
+                            <button
+                              onClick={() => handleDetailsUnlinkArticle(art.id)}
+                              className="text-slate-500 hover:text-rose-400 hover:bg-rose-500/5 hover:border-rose-500/10 px-2.5 py-1.5 rounded-lg border border-transparent text-[10px] font-bold transition-all"
+                            >
+                              Unlink
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-slate-500 text-xs border border-dashed border-slate-800 rounded-2xl bg-slate-950/20">
+                      No Knowledge Base articles linked.
+                    </div>
+                  )}
+
+                </div>
+
+                {/* Incident Activity Timeline */}
+                <div className="space-y-4 pt-4 border-t border-slate-800">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <FaHistory className="text-slate-400" /> Incident Activity Timeline
+                  </h4>
+                  {activityLogs && activityLogs.length > 0 ? (
+                    <div className="space-y-3 bg-slate-950/40 p-4 rounded-2xl border border-slate-850 max-h-52 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-850">
+                      {activityLogs.map((log) => (
+                        <div key={log.id} className="flex items-start gap-3 text-xs leading-relaxed border-l border-slate-800 pl-3 relative ml-1.5 pb-2 last:pb-0">
+                          {/* Timeline dot */}
+                          <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 absolute -left-[4px] top-1.5 shadow-sm shadow-cyan-500/50" />
+                          <span className="text-[10px] text-slate-500 shrink-0 font-mono">
+                            {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <span className="font-bold text-slate-300 block mb-0.5">{log.action}</span>
+                            <span className="text-slate-400 text-[11px] block">{log.description}</span>
+                            {log.user && (
+                              <span className="text-[10px] text-slate-500 font-medium mt-0.5 block">
+                                Triggered by: {log.user.name || log.user.username} ({log.user.email})
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-slate-500 text-xs border border-dashed border-slate-800 rounded-2xl bg-slate-950/20">
+                      No activity logs recorded for this incident yet.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 border-t border-slate-800 bg-slate-900/50 flex justify-end shrink-0">
+                <button
+                  onClick={() => setIsDetailsModalOpen(false)}
+                  className="bg-slate-800 hover:bg-slate-700 text-white px-5 py-2.5 rounded-xl text-xs font-semibold transition"
+                >
+                  Close View
+                </button>
+              </div>
+
             </motion.div>
           </div>
         )}

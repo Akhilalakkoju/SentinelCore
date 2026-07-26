@@ -31,6 +31,12 @@ public class IncidentController {
         return incidentService.getIncidentById(id);
     }
 
+    // Get Incidents by Asset ID
+    @GetMapping("/asset/{assetId}")
+    public List<IncidentDto> getIncidentsByAsset(@PathVariable Long assetId) {
+        return incidentService.getIncidentsByAsset(assetId);
+    }
+
     // Create Incident
     @PostMapping
     public IncidentDto createIncident(@Valid @RequestBody IncidentDto dto) {
@@ -71,5 +77,23 @@ public class IncidentController {
     @GetMapping("/{id}/sla-breached")
     public boolean isSLABreached(@PathVariable Long id) {
         return incidentService.isSLABreached(id);
+    }
+
+    // Reset Incidents and Playbook execution logs
+    @PostMapping("/reset")
+    public void resetIncidents() {
+        incidentService.resetIncidents();
+    }
+
+    // Link KB Article to Incident
+    @PostMapping("/{id}/kb-articles/{articleId}")
+    public IncidentDto linkKbArticle(@PathVariable Long id, @PathVariable Long articleId) {
+        return incidentService.linkKbArticle(id, articleId);
+    }
+
+    // Unlink KB Article from Incident
+    @DeleteMapping("/{id}/kb-articles/{articleId}")
+    public IncidentDto unlinkKbArticle(@PathVariable Long id, @PathVariable Long articleId) {
+        return incidentService.unlinkKbArticle(id, articleId);
     }
 }

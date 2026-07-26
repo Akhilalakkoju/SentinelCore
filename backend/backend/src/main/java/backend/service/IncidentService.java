@@ -1,10 +1,13 @@
 package backend.service;
 
 import backend.dto.IncidentDto;
+import backend.dto.KnowledgeBaseArticleSummaryDto;
 import backend.entity.Incident;
 import backend.entity.User;
+import backend.entity.KnowledgeBaseArticle;
 import backend.repository.IncidentRepository;
 import backend.repository.UserRepository;
+import backend.repository.KnowledgeBaseArticleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -25,10 +28,24 @@ public class IncidentService {
     private final IncidentRepository incidentRepository;
     private final UserRepository userRepository;
     private final AuditLogService auditLogService;
+    private final backend.repository.AuditLogRepository auditLogRepository;
+    private final backend.repository.PlaybookExecutionRepository playbookExecutionRepository;
+    private final backend.repository.PlaybookExecutionLogRepository playbookExecutionLogRepository;
+    private final backend.repository.PlaybookNotificationRepository playbookNotificationRepository;
+    private final backend.repository.PlaybookAuditLogRepository playbookAuditLogRepository;
+    private final KnowledgeBaseArticleRepository kbArticleRepository;
+    private final backend.repository.AssetRepository assetRepository;
 
     // Get All Incidents
     public List<IncidentDto> getAllIncidents() {
-        return incidentRepository.findAllByOrderByIdDesc().stream()
+        return incidentRepository.findAllByOrderByEscalatedDescIdDesc().stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
+    // Get Incidents by Asset ID
+    public List<IncidentDto> getIncidentsByAsset(Long assetId) {
+        return incidentRepository.findByAssetId(assetId).stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
@@ -126,7 +143,7 @@ public class IncidentService {
         String changeLogStr = changes.isEmpty() ? "No changes" : String.join(", ", changes);
         auditLogService.createLog(
                 "UPDATE",
-                "Incident updated: " + updatedIncident.getTitle() + " | Details: " + changeLogStr,
+                changeLogStr,
                 getCurrentUser(),
                 updatedIncident
         );
@@ -157,13 +174,14 @@ public class IncidentService {
         Incident incident = incidentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Incident not found with id: " + id));
 
+        boolean oldEscalated = incident.getEscalated() != null ? incident.getEscalated() : false;
         incident.setEscalated(true);
         incident.setUpdatedAt(LocalDateTime.now());
         Incident saved = incidentRepository.save(incident);
 
         auditLogService.createLog(
                 "UPDATE",
-                "Incident escalated: " + saved.getTitle(),
+                "Escalated status updated from " + oldEscalated + " to true",
                 getCurrentUser(),
                 saved
         );
@@ -177,13 +195,14 @@ public class IncidentService {
         Incident incident = incidentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Incident not found with id: " + id));
 
+        String oldStatus = incident.getStatus();
         incident.setStatus("Resolved");
         incident.setUpdatedAt(LocalDateTime.now());
         Incident saved = incidentRepository.save(incident);
 
         auditLogService.createLog(
                 "UPDATE",
-                "Incident resolved: " + saved.getTitle(),
+                "Status changed from " + oldStatus + " to Resolved",
                 getCurrentUser(),
                 saved
         );
@@ -273,6 +292,24 @@ public class IncidentService {
                    .assignedToName(incident.getAssignedTo().getName());
         }
 
+        if (incident.getKbArticles() != null) {
+            builder.linkedArticles(incident.getKbArticles().stream()
+                    .map(art -> KnowledgeBaseArticleSummaryDto.builder()
+                            .id(art.getId())
+                            .title(art.getTitle())
+                            .type(art.getType())
+                            .version(art.getVersion())
+                            .build())
+                    .collect(Collectors.toList()));
+        } else {
+            builder.linkedArticles(new ArrayList<>());
+        }
+
+        if (incident.getAsset() != null) {
+            builder.assetId(incident.getAsset().getId())
+                   .assetName(incident.getAsset().getAssetName());
+        }
+
         return builder.build();
     }
 
@@ -292,6 +329,104 @@ public class IncidentService {
             builder.assignedTo(user);
         }
 
+        if (dto.getAssetId() != null) {
+            backend.entity.Asset asset = assetRepository.findById(dto.getAssetId())
+                    .orElseThrow(() -> new RuntimeException("Asset not found with id: " + dto.getAssetId()));
+            builder.asset(asset);
+        }
+
         return builder.build();
+    }
+
+    @Transactional
+    public void resetIncidents() {
+        playbookNotificationRepository.deleteAll();
+        playbookExecutionLogRepository.deleteAll();
+        playbookExecutionRepository.deleteAll();
+        auditLogRepository.deleteAll();
+        playbookAuditLogRepository.deleteAll();
+        incidentRepository.deleteAll();
+
+        seedIncident("Brute Force Detection on Main Portal",
+                "Detected 15 failed authentication attempts for user 'admin' within 2 minutes from IP 192.168.1.105.",
+                "High", "Open", "Auth Service");
+
+        seedIncident("Malware Suspect on WS-908",
+                "Unrecognized hash executed in temporary folder. Target: C:\\Users\\Public\\Temp\\backdoor.exe.",
+                "Critical", "Investigating", "EDR Agent");
+
+        seedIncident("Privilege Escalation on Domain Controller",
+                "Unusual privilege elevation detected for user 'service_account_temp' on domain controller.",
+                "Critical", "Open", "Active Directory");
+
+        seedIncident("Vulnerability Scan Required for Web Server Subnet",
+                "Scheduled scan failed to complete due to timeout. Manual intervention or re-triggering required.",
+                "Medium", "Open", "Vulnerability Scanner");
+
+        seedIncident("Suspicious PowerShell Execution (Malware Suspect)",
+                "Encoded PowerShell command executed by user 'developer_temp' on host WS-102. Action suggests potential malware downloader payload.",
+                "High", "Open", "EDR Agent");
+
+        seedIncident("Unauthorized Database Access (Privilege Escalation Suspect)",
+                "User account 'analyst_temp' attempted to run high-privilege queries on production database DB-PROD-01, triggering privilege escalation detection rules.",
+                "Critical", "Open", "Active Directory");
+    }
+
+    private void seedIncident(String title, String description, String severity, String status, String source) {
+        Incident incident = Incident.builder()
+                .title(title)
+                .description(description)
+                .severity(severity)
+                .status(status)
+                .source(source)
+                .build();
+        setDeadlineBasedOnPriority(incident, "P3");
+        incident.setCreatedAt(LocalDateTime.now());
+        incident.setUpdatedAt(LocalDateTime.now());
+        incidentRepository.save(incident);
+    }
+
+    @Transactional
+    public IncidentDto linkKbArticle(Long incidentId, Long articleId) {
+        Incident incident = incidentRepository.findById(incidentId)
+                .orElseThrow(() -> new RuntimeException("Incident not found with id: " + incidentId));
+        KnowledgeBaseArticle article = kbArticleRepository.findById(articleId)
+                .orElseThrow(() -> new RuntimeException("KB Article not found with id: " + articleId));
+
+        if (!incident.getKbArticles().contains(article)) {
+            incident.getKbArticles().add(article);
+            Incident saved = incidentRepository.save(incident);
+            
+            auditLogService.createLog(
+                    "UPDATE",
+                    "Linked KB Article: " + article.getTitle(),
+                    getCurrentUser(),
+                    saved
+            );
+            return convertToDto(saved);
+        }
+        return convertToDto(incident);
+    }
+
+    @Transactional
+    public IncidentDto unlinkKbArticle(Long incidentId, Long articleId) {
+        Incident incident = incidentRepository.findById(incidentId)
+                .orElseThrow(() -> new RuntimeException("Incident not found with id: " + incidentId));
+        KnowledgeBaseArticle article = kbArticleRepository.findById(articleId)
+                .orElseThrow(() -> new RuntimeException("KB Article not found with id: " + articleId));
+
+        if (incident.getKbArticles().contains(article)) {
+            incident.getKbArticles().remove(article);
+            Incident saved = incidentRepository.save(incident);
+            
+            auditLogService.createLog(
+                    "UPDATE",
+                    "Unlinked KB Article: " + article.getTitle(),
+                    getCurrentUser(),
+                    saved
+            );
+            return convertToDto(saved);
+        }
+        return convertToDto(incident);
     }
 }

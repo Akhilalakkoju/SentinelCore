@@ -25,6 +25,7 @@ public class PlaybookDto {
     private String triggerValue;
     private String conditionsJson;
     private Boolean isActive;
+    private String estimatedTime;
     private List<PlaybookStepDto> steps;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

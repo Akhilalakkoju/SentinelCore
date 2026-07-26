@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -35,6 +36,9 @@ public class IncidentDto {
     private String priority;
     private Boolean escalated;
     private LocalDateTime slaDeadline;
+    private Long assetId;
+    private String assetName;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private List<KnowledgeBaseArticleSummaryDto> linkedArticles;
 }

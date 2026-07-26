@@ -46,6 +46,13 @@ public class SecurityConfig {
                         // Public APIs
                         // ===========================
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/assets/register").permitAll()
+                        .requestMatchers("/api/assets/heartbeat").permitAll()
+                        .requestMatchers("/api/playbooks/simulate-brute-force").permitAll()
+                        .requestMatchers("/api/playbooks/target-status").permitAll()
+                        .requestMatchers("/api/playbooks/reset-simulation").permitAll()
+                        .requestMatchers("/api/playbooks/simulate-phishing").permitAll()
+                        .requestMatchers("/api/playbooks/executions/**").permitAll()
 
                         // ===========================
                         // WebSocket
@@ -70,14 +77,33 @@ public class SecurityConfig {
                         // Dashboard
                         // ===========================
                         .requestMatchers("/api/dashboard/**")
+                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER", "MANAGER")
+
+                        // ===========================
+                        // Asset APIs
+                        // ===========================
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/assets/**")
                         .hasAnyRole("ADMIN", "ANALYST", "VIEWER")
+
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/assets/**")
+                        .hasAnyRole("ADMIN", "ANALYST")
+
+                        .requestMatchers(HttpMethod.PUT,
+                                "/api/assets/**")
+                        .hasAnyRole("ADMIN", "ANALYST")
+
+                        .requestMatchers(HttpMethod.DELETE,
+                                "/api/assets/**")
+                        .hasRole("ADMIN")
 
                         // ===========================
                         // Threat APIs
                         // ===========================
                         .requestMatchers(HttpMethod.GET,
                                 "/api/threats/**")
-                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER")
+                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER", "MANAGER")
 
                         .requestMatchers(HttpMethod.POST,
                                 "/api/threats/**")
@@ -96,7 +122,7 @@ public class SecurityConfig {
                         // ===========================
                         .requestMatchers(HttpMethod.GET,
                                 "/api/ioc/**")
-                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER")
+                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER", "MANAGER")
 
                         .requestMatchers(HttpMethod.POST,
                                 "/api/ioc/**")
@@ -115,7 +141,7 @@ public class SecurityConfig {
                         // ===========================
                         .requestMatchers(HttpMethod.GET,
                                 "/api/alerts/**")
-                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER")
+                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER", "MANAGER")
 
                         .requestMatchers(HttpMethod.POST,
                                 "/api/alerts/**")
@@ -134,21 +160,51 @@ public class SecurityConfig {
                         // ===========================
                         .requestMatchers(HttpMethod.GET,
                                 "/api/notifications/**")
-                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER")
+                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER", "MANAGER")
 
                         .requestMatchers(HttpMethod.PUT,
                                 "/api/notifications/**")
-                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER")
+                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER", "MANAGER")
 
                         .requestMatchers(HttpMethod.DELETE,
                                 "/api/notifications/**")
                         .hasRole("ADMIN")
 
                         // ===========================
+                        // Knowledge Base
+                        // ===========================
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/kb/**")
+                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER", "MANAGER")
+
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/kb/**")
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.PUT,
+                                "/api/kb/**")
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.DELETE,
+                                "/api/kb/**")
+                        .hasRole("ADMIN")
+
+                        // ===========================
+                        // Incident KB Articles Mapping
+                        // ===========================
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/incidents/*/kb-articles/*")
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.DELETE,
+                                "/api/incidents/*/kb-articles/*")
+                        .hasRole("ADMIN")
+
+                        // ===========================
                         // Reports
                         // ===========================
                         .requestMatchers("/api/reports/**")
-                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER")
+                        .hasAnyRole("ADMIN", "ANALYST", "VIEWER", "MANAGER")
 
                         // ===========================
                         // Allow OPTIONS
