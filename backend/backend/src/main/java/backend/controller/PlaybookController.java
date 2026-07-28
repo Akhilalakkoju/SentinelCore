@@ -36,6 +36,11 @@ public class PlaybookController {
         return playbookService.getPlaybookById(id);
     }
 
+    @GetMapping("/{id}/details")
+    public PlaybookDetailsDto getPlaybookDetails(@PathVariable Long id) {
+        return playbookService.getPlaybookDetails(id);
+    }
+
     @PostMapping
     public PlaybookDto createPlaybook(@Valid @RequestBody PlaybookDto dto) {
         return playbookService.createPlaybook(dto);

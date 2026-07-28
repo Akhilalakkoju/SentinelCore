@@ -11,6 +11,7 @@ import ThreatChart from "../components/ThreatChart";
 import RecentAlerts from "../components/RecentAlerts";
 import RecentThreats from "../components/RecentThreats";
 import SeverityChart from "../components/SeverityChart";
+import LowDiskSpaceWidgets from "../components/LowDiskSpaceWidgets";
 import { motion } from "framer-motion";
 
 function Dashboard() {
@@ -76,6 +77,11 @@ function Dashboard() {
             </div>
 
         </div>
+
+          {/* Low Disk Space Playbook widgets */}
+          <div className="mt-10">
+            <LowDiskSpaceWidgets />
+          </div>
 
           {/* AI Widgets */}
 

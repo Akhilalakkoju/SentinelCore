@@ -96,6 +96,39 @@ def collect_dynamic_metrics():
         "diskUsage": disk_usage
     }
 
+def collect_disk_info(asset_id, hostname):
+    disks = []
+    try:
+        partitions = psutil.disk_partitions(all=False)
+        for p in partitions:
+            if 'cdrom' in p.opts or p.fstype == '':
+                continue
+            try:
+                usage = psutil.disk_usage(p.mountpoint)
+                drive_name = p.device.split('\\')[0] if '\\' in p.device else p.device
+                if not drive_name:
+                    drive_name = p.mountpoint
+                
+                disks.append({
+                    "driveName": drive_name,
+                    "totalSpace": round(usage.total / (1024 ** 3), 2),
+                    "usedSpace": round(usage.used / (1024 ** 3), 2),
+                    "freeSpace": round(usage.free / (1024 ** 3), 2),
+                    "diskUsagePercentage": usage.percent
+                })
+            except Exception:
+                continue
+    except Exception as e:
+        print(f"[-] Error collecting disks: {e}")
+        
+    return {
+        "assetId": asset_id,
+        "hostname": hostname,
+        "macAddress": get_mac_address(),
+        "disks": disks,
+        "timestamp": datetime.now().isoformat()
+    }
+
 def register_agent():
     print("[*] Gathering system information...")
     payload = collect_static_info()
@@ -106,7 +139,7 @@ def register_agent():
             response = requests.post(f"{BACKEND_URL}/assets/register", json=payload)
             if response.status_code == 200 or response.status_code == 201:
                 print("[+] Registration successful!")
-                return payload
+                return response.json()
             else:
                 print(f"[-] Registration failed with status code {response.status_code}: {response.text}")
         except requests.exceptions.RequestException as e:
@@ -120,12 +153,26 @@ def main():
     static_info = register_agent()
     
     print("[*] Starting monitoring loop (heartbeat interval: 30 seconds)...")
+    last_disk_sent = 0
     while True:
+        current_time = time.time()
+        if current_time - last_disk_sent >= 300:
+            try:
+                disk_payload = collect_disk_info(static_info.get("assetId"), static_info.get("hostname"))
+                print(f"[{datetime.now().strftime('%H:%M:%S')}] Sending disk partition metrics: {[d['driveName'] for d in disk_payload['disks']]}")
+                response = requests.post(f"{BACKEND_URL}/assets/disk-metrics", json=disk_payload)
+                if response.status_code == 200:
+                    last_disk_sent = current_time
+                else:
+                    print(f"[-] Sending disk metrics failed with status: {response.status_code}")
+            except Exception as e:
+                print(f"[-] Error sending disk metrics: {e}")
+
         try:
             metrics = collect_dynamic_metrics()
             payload = {
-                "hostname": static_info["hostname"],
-                "macAddress": static_info["macAddress"],
+                "hostname": static_info.get("hostname"),
+                "macAddress": static_info.get("macAddress"),
                 "cpuUsage": metrics["cpuUsage"],
                 "ramUsage": metrics["ramUsage"],
                 "diskUsage": metrics["diskUsage"]

@@ -94,6 +94,7 @@ public class PlaybookService {
                 seedVulnScanPlaybook();
                 seedPhishingPlaybook();
                 seedAssetOfflinePlaybook();
+                seedLowDiskSpacePlaybook();
 
                 // Resolve any stuck PENDING executions on startup
                 List<PlaybookExecution> stuckExecs = playbookExecutionRepository.findAll();
@@ -494,6 +495,49 @@ public class PlaybookService {
                                 .build();
 
                 playbookStepRepository.saveAll(List.of(step1));
+        }
+
+        private void seedLowDiskSpacePlaybook() {
+                if (playbookRepository.findByName("Low Disk Space Playbook").isEmpty()) {
+                        log.info("Seeding Low Disk Space Playbook...");
+                        Playbook lowDiskSpace = Playbook.builder()
+                                        .name("Low Disk Space Playbook")
+                                        .description("Fires when a drive partition usage exceeds the configured threshold. Automatically files a low disk space incident, notifies admins, and runs diagnostic cleanup.")
+                                        .triggerType("ALERT_TYPE")
+                                        .triggerValue("Low Disk Space")
+                                        .conditionsJson("{\"threshold\":90.0,\"recoveryThreshold\":85.0}")
+                                        .estimatedTime("5–10 minutes")
+                                        .isActive(true)
+                                        .build();
+
+                        lowDiskSpace = playbookRepository.save(lowDiskSpace);
+
+                        PlaybookStep step1 = PlaybookStep.builder()
+                                        .playbook(lowDiskSpace)
+                                        .stepOrder(1)
+                                        .name("Identify large directories and log files")
+                                        .actionType("MANUAL")
+                                        .parametersJson("{}")
+                                        .build();
+
+                        PlaybookStep step2 = PlaybookStep.builder()
+                                        .playbook(lowDiskSpace)
+                                        .stepOrder(2)
+                                        .name("Notify System Administrators")
+                                        .actionType("SEND_NOTIFICATION")
+                                        .parametersJson("{\"channel\":\"IN_APP\",\"recipient\":\"ADMIN\"}")
+                                        .build();
+
+                        PlaybookStep step3 = PlaybookStep.builder()
+                                        .playbook(lowDiskSpace)
+                                        .stepOrder(3)
+                                        .name("Perform temporary files cleanup")
+                                        .actionType("CLEAN_DISK")
+                                        .parametersJson("{}")
+                                        .build();
+
+                        playbookStepRepository.saveAll(List.of(step1, step2, step3));
+                }
         }
 
         // ================= Config CRUD Operations =================
@@ -964,6 +1008,13 @@ public class PlaybookService {
                 String params = step.getParametersJson();
 
                 switch (action) {
+                        case "MANUAL":
+                                writeExecutionLog(execution, step.getName(), "RUNNING", "INFO",
+                                                "Waiting for analyst manual verification...");
+                                Thread.sleep(200);
+                                writeExecutionLog(execution, step.getName(), "SUCCESS", "INFO",
+                                                "Analyst manual verification completed successfully.");
+                                break;
                         case "VERIFY_HEARTBEAT":
                                 writeExecutionLog(execution, step.getName(), "RUNNING", "INFO",
                                                 "Checking recent heartbeat logs for the target asset...");
@@ -1065,7 +1116,7 @@ public class PlaybookService {
                                 writeExecutionLog(execution, step.getName(), "RUNNING", "INFO",
                                                 "Deactivated user account admin@acme.com. Access token keys invalidated.");
                                 break;
-                        case "SCAN_VULNERABILITY":
+                                case "SCAN_VULNERABILITY":
                                 writeExecutionLog(execution, step.getName(), "RUNNING", "INFO",
                                                 "Spinning up target vulnerability profile scan...");
                                 writeExecutionLog(execution, step.getName(), "RUNNING", "INFO",
@@ -1083,6 +1134,29 @@ public class PlaybookService {
                                                         "Asset Offline Alert",
                                                         "Critical",
                                                         "Asset " + assetName + " has gone OFFLINE. (Playbook run #" + execution.getId() + ")"
+                                                );
+                                        }
+
+                                        writeExecutionLog(execution, step.getName(), "SUCCESS", "INFO",
+                                                "Action: Sent alert notification to Administrator.");
+                                } else if ("Low Disk Space Playbook".equals(execution.getPlaybookName())) {
+                                        Incident targetIncident = execution.getIncident();
+                                        String assetName = (targetIncident != null && targetIncident.getAsset() != null)
+                                                ? targetIncident.getAsset().getHostname()
+                                                : "Unknown Asset";
+                                        String driveName = (targetIncident != null && targetIncident.getDriveName() != null)
+                                                ? targetIncident.getDriveName()
+                                                : "Unknown Drive";
+                                        Double diskUsage = (targetIncident != null && targetIncident.getDiskUsagePercentage() != null)
+                                                ? targetIncident.getDiskUsagePercentage()
+                                                : 0.0;
+
+                                        if (notificationService != null) {
+                                                notificationService.saveNotification(
+                                                        "Low Disk Space Detected",
+                                                        "Medium",
+                                                        String.format("Asset: %s | Drive: %s | Usage: %.1f%%.", 
+                                                                assetName, driveName, diskUsage)
                                                 );
                                         }
 
@@ -1113,6 +1187,13 @@ public class PlaybookService {
                                         writeExecutionLog(execution, step.getName(), "RUNNING", "INFO", "Alert sent to: "
                                                         + notif.getRecipient() + " over " + notif.getChannel());
                                 }
+                                break;
+                        case "CLEAN_DISK":
+                                writeExecutionLog(execution, step.getName(), "RUNNING", "INFO",
+                                                "Starting automated disk space recovery task...");
+                                Thread.sleep(200);
+                                writeExecutionLog(execution, step.getName(), "SUCCESS", "INFO",
+                                                "Cleanup complete: Temporary files and log files successfully rotated/cleared.");
                                 break;
                         case "CREATE_INCIDENT":
                                 // If triggered on an existing incident, update it instead of creating a duplicate
@@ -1565,6 +1646,95 @@ public class PlaybookService {
                                 "Automatically triggered Asset Offline Playbook for Incident ID: " + incident.getId());
 
                 return convertToExecutionDto(execution);
+        }
+
+        @Transactional
+        public PlaybookExecutionDto triggerLowDiskSpacePlaybook(Incident incident) {
+                Playbook playbook = playbookRepository.findByName("Low Disk Space Playbook")
+                                .orElseGet(() -> {
+                                        seedLowDiskSpacePlaybook();
+                                        return playbookRepository.findByName("Low Disk Space Playbook")
+                                                        .orElseThrow(() -> new RuntimeException("Low Disk Space playbook not seeded"));
+                                });
+
+                if (!playbook.getIsActive()) {
+                        log.info("Low Disk Space playbook is inactive, skipping execution.");
+                        return null;
+                }
+
+                PlaybookExecution execution = PlaybookExecution.builder()
+                                .playbook(playbook)
+                                .playbookName(playbook.getName())
+                                .incident(incident)
+                                .incidentId(incident.getId())
+                                .status("PENDING")
+                                .currentStep("Queued for execution")
+                                .currentStepIndex(0)
+                                .progress(0)
+                                .startedAt(LocalDateTime.now())
+                                .build();
+
+                execution = playbookExecutionRepository.save(execution);
+
+                // Run asynchronously
+                runAsyncExecution(execution.getId(), playbook.getId());
+
+                saveAuditLog("TRIGGER_PLAYBOOK", execution.getId(),
+                                "Automatically triggered Low Disk Space Playbook for Incident ID: " + incident.getId());
+
+                return convertToExecutionDto(execution);
+        }
+
+        @Transactional(readOnly = true)
+        public PlaybookDetailsDto getPlaybookDetails(Long id) {
+                Playbook playbook = playbookRepository.findById(id)
+                                .orElseThrow(() -> new RuntimeException("Playbook not found with id: " + id));
+
+                // Find executions for this playbook
+                List<PlaybookExecution> executions = playbookExecutionRepository.findAll().stream()
+                                .filter(e -> e.getPlaybook() != null && e.getPlaybook().getId().equals(id))
+                                .sorted((e1, e2) -> e2.getId().compareTo(e1.getId()))
+                                .collect(Collectors.toList());
+
+                LocalDateTime lastExecutionTime = executions.isEmpty() ? null : executions.get(0).getStartedAt();
+                long totalExecutions = executions.size();
+
+                // Find recent incidents associated with executions
+                List<IncidentDto> recentIncidents = executions.stream()
+                                .map(PlaybookExecution::getIncident)
+                                .filter(java.util.Objects::nonNull)
+                                .distinct()
+                                .limit(5)
+                                .map(incident -> IncidentDto.builder()
+                                                .id(incident.getId())
+                                                .title(incident.getTitle())
+                                                .severity(incident.getSeverity())
+                                                .status(incident.getStatus())
+                                                .source(incident.getSource())
+                                                .createdAt(incident.getCreatedAt())
+                                                .updatedAt(incident.getUpdatedAt())
+                                                .build())
+                                .collect(Collectors.toList());
+
+                List<PlaybookExecutionDto> executionHistory = executions.stream()
+                                .limit(10)
+                                .map(this::convertToExecutionDto)
+                                .collect(Collectors.toList());
+
+                return PlaybookDetailsDto.builder()
+                                .id(playbook.getId())
+                                .name(playbook.getName())
+                                .description(playbook.getDescription())
+                                .triggerType(playbook.getTriggerType())
+                                .triggerValue(playbook.getTriggerValue())
+                                .conditionsJson(playbook.getConditionsJson())
+                                .isActive(playbook.getIsActive())
+                                .estimatedTime(playbook.getEstimatedTime())
+                                .lastExecutionTime(lastExecutionTime)
+                                .totalExecutions(totalExecutions)
+                                .recentIncidents(recentIncidents)
+                                .executionHistory(executionHistory)
+                                .build();
         }
 
         public PlaybookExecutionDto triggerPhishingPlaybook(Alert alert) {

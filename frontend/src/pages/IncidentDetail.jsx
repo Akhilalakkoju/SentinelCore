@@ -306,6 +306,83 @@ function IncidentDetail() {
                     </div>
                   </div>
 
+                  {/* Low Disk Space Statistics Card */}
+                  {incident.driveName && (
+                    <div className="border-t border-slate-800/80 pt-5 mt-5">
+                      <h4 className="text-sm font-bold text-white mb-3 uppercase tracking-wide flex items-center gap-2">
+                        💾 Disk Partition Details & Usage
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-950/60 border border-slate-900 rounded-2xl p-5 text-xs font-mono leading-relaxed mb-4">
+                        <div>
+                          <div className="text-slate-500 font-bold uppercase tracking-wider mb-1">Drive Partition</div>
+                          <span className="text-cyan-400 font-bold text-sm bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded">
+                            {incident.driveName}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-slate-500 font-bold uppercase tracking-wider mb-1">Free Space Remaining</div>
+                          <span className="text-emerald-400 font-bold text-sm font-mono">
+                            {incident.freeSpaceRemaining != null ? `${incident.freeSpaceRemaining.toFixed(2)} GB` : "N/A"}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-slate-500 font-bold uppercase tracking-wider mb-1">Detection Time</div>
+                          <span className="text-slate-300 font-mono">
+                            {incident.detectionTime ? new Date(incident.detectionTime).toLocaleString() : "N/A"}
+                          </span>
+                        </div>
+                        <div className="md:col-span-3 border-t border-slate-900 pt-4 mt-2">
+                          <div className="text-slate-500 font-bold uppercase tracking-wider mb-2">Partition Usage Percentage</div>
+                          <div className="flex items-center gap-3">
+                            <div className="w-full bg-slate-900 border border-slate-800 h-4 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full ${
+                                  (incident.diskUsagePercentage || 0) >= 90
+                                    ? "bg-gradient-to-r from-red-600 to-rose-500"
+                                    : (incident.diskUsagePercentage || 0) >= 85
+                                    ? "bg-gradient-to-r from-amber-600 to-yellow-500"
+                                    : "bg-gradient-to-r from-emerald-600 to-green-500"
+                                }`}
+                                style={{ width: `${incident.diskUsagePercentage || 0}%` }}
+                              />
+                            </div>
+                            <span className="text-sm font-bold text-white font-mono shrink-0">
+                              {incident.diskUsagePercentage != null ? `${incident.diskUsagePercentage.toFixed(1)}%` : "0%"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Asset Details (Visible on Disk Incident) */}
+                  {incident.driveName && (
+                    <div className="border-t border-slate-800/80 pt-5 mt-5">
+                      <h4 className="text-sm font-bold text-white mb-3 uppercase tracking-wide flex items-center gap-2">
+                        🖥️ Associated Asset Information
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-950/60 border border-slate-900 rounded-2xl p-5 text-xs font-mono leading-relaxed mb-4">
+                        <div>
+                          <div className="text-slate-500 font-bold uppercase tracking-wider mb-1">Asset Name</div>
+                          <span className="text-white font-bold">{incident.assetName || "N/A"}</span>
+                        </div>
+                        <div>
+                          <div className="text-slate-500 font-bold uppercase tracking-wider mb-1">Asset IP Address</div>
+                          <span className="text-slate-300">{incident.assetIpAddress || "N/A"}</span>
+                        </div>
+                        <div>
+                          <div className="text-slate-500 font-bold uppercase tracking-wider mb-1">Asset Details</div>
+                          <span
+                            onClick={() => navigate(`/assets/detail/${incident.assetId}`)}
+                            className="cursor-pointer text-cyan-400 hover:text-cyan-300 underline font-bold"
+                          >
+                            Go to Asset Detail Page
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Description Box */}
                   <div className="border-t border-slate-800/80 pt-4">
                     <h4 className="text-sm font-bold text-white mb-2 uppercase tracking-wide">Forensic Details</h4>

@@ -37,6 +37,7 @@ import KnowledgeBase from "../pages/KnowledgeBase";
 import IncidentDetail from "../pages/IncidentDetail";
 
 import PlaybookList from "../pages/PlaybookList";
+import PlaybookDetail from "../pages/PlaybookDetail";
 import PlaybookExecutionDetail from "../pages/PlaybookExecutionDetail";
 
 import AuditLogs from "../pages/AuditLogs";
@@ -240,6 +241,11 @@ function AppRoutes() {
                 <Route
                     path="/playbooks"
                     element={protect(<PlaybookList />)}
+                />
+
+                <Route
+                    path="/playbooks/:id"
+                    element={protect(<PlaybookDetail />)}
                 />
 
                 <Route

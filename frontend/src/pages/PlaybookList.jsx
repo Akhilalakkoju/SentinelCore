@@ -208,7 +208,9 @@ function PlaybookList() {
                 >
                   <div className="flex justify-between items-start mb-4">
                     <div>
-                      <h4 className="text-lg font-bold text-white">{playbook.name}</h4>
+                      <h4 className="text-lg font-bold text-white cursor-pointer hover:text-sky-400 transition" onClick={() => navigate(`/playbooks/${playbook.id}`)}>
+                        {playbook.name}
+                      </h4>
                       <p className="text-slate-400 text-xs mt-1 min-h-[32px] line-clamp-2">
                         {playbook.description || "No description provided."}
                       </p>
@@ -268,6 +270,15 @@ function PlaybookList() {
                     ) : (
                       <p className="text-slate-600 text-xs italic">No steps defined for this playbook.</p>
                     )}
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t border-slate-800/60 flex justify-end">
+                    <button
+                      onClick={() => navigate(`/playbooks/${playbook.id}`)}
+                      className="bg-slate-950 hover:bg-slate-900 text-sky-400 hover:text-sky-300 border border-slate-800/80 hover:border-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition"
+                    >
+                      View Details & Stats
+                    </button>
                   </div>
                 </GlassCard>
               ))}

@@ -51,6 +51,18 @@ public class Incident {
     @JoinColumn(name = "asset_id")
     private Asset asset;
 
+    @Column(name = "drive_name")
+    private String driveName;
+
+    @Column(name = "disk_usage_percentage")
+    private Double diskUsagePercentage;
+
+    @Column(name = "free_space_remaining")
+    private Double freeSpaceRemaining;
+
+    @Column(name = "detection_time")
+    private LocalDateTime detectionTime;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

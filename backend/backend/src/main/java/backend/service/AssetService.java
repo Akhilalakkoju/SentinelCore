@@ -13,6 +13,12 @@ import backend.repository.AssetRepository;
 import backend.entity.Incident;
 import backend.repository.IncidentRepository;
 import backend.repository.UserRepository;
+import backend.entity.AssetDisk;
+import backend.repository.AssetDiskRepository;
+import backend.entity.Playbook;
+import backend.repository.PlaybookRepository;
+import backend.dto.AssetDiskReportDto;
+import backend.dto.AssetDiskMetricDto;
 import backend.specification.AssetSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -46,6 +52,8 @@ public class AssetService {
     private final AlertNotificationService alertNotificationService;
     private final IncidentRepository incidentRepository;
     private final PlaybookService playbookService;
+    private final AssetDiskRepository assetDiskRepository;
+    private final PlaybookRepository playbookRepository;
 
     private static final Set<Long> activeOnlineAssetIds = Collections.synchronizedSet(new HashSet<>());
 
@@ -653,6 +661,129 @@ public class AssetService {
                 playbookService.triggerAssetOfflinePlaybook(savedIncident);
             } catch (Exception e) {
                 System.err.println("Failed to trigger Asset Offline playbook automatically: " + e.getMessage());
+            }
+        }
+    }
+
+    @Transactional
+    public void processDiskMetrics(backend.dto.AssetDiskReportDto dto) {
+        Optional<Asset> existingOpt = Optional.empty();
+        if (dto.getMacAddress() != null && !dto.getMacAddress().trim().isEmpty()) {
+            existingOpt = assetRepository.findByMacAddress(dto.getMacAddress());
+        }
+        if (existingOpt.isEmpty() && dto.getHostname() != null && !dto.getHostname().trim().isEmpty()) {
+            existingOpt = assetRepository.findByHostname(dto.getHostname());
+        }
+
+        Asset asset = existingOpt.orElseThrow(() -> new ResourceNotFoundException("Asset not found for disk metrics: " + dto.getHostname()));
+
+        // Update asset last seen status
+        asset.setStatus("ONLINE");
+        asset.setLastSeen(LocalDateTime.now());
+        assetRepository.save(asset);
+
+        // Fetch thresholds from playbook configuration
+        double threshold = 90.0;
+        double recoveryThreshold = 85.0;
+        try {
+            Optional<Playbook> playbookOpt = playbookRepository.findByName("Low Disk Space Playbook");
+            if (playbookOpt.isPresent()) {
+                String cond = playbookOpt.get().getConditionsJson();
+                if (cond != null && !cond.isEmpty()) {
+                    java.util.regex.Matcher m1 = java.util.regex.Pattern.compile("\"threshold\"\\s*:\\s*([0-9.]+)").matcher(cond);
+                    if (m1.find()) threshold = Double.parseDouble(m1.group(1));
+                    java.util.regex.Matcher m2 = java.util.regex.Pattern.compile("\"recoveryThreshold\"\\s*:\\s*([0-9.]+)").matcher(cond);
+                    if (m2.find()) recoveryThreshold = Double.parseDouble(m2.group(1));
+                }
+            }
+        } catch (Exception e) {
+            // Log fallback
+        }
+
+        for (backend.dto.AssetDiskMetricDto diskDto : dto.getDisks()) {
+            Optional<AssetDisk> diskOpt = assetDiskRepository.findByAssetIdAndDriveName(asset.getId(), diskDto.getDriveName());
+            AssetDisk disk;
+            if (diskOpt.isPresent()) {
+                disk = diskOpt.get();
+            } else {
+                disk = new AssetDisk();
+                disk.setAsset(asset);
+                disk.setDriveName(diskDto.getDriveName());
+            }
+            disk.setTotalSpace(diskDto.getTotalSpace());
+            disk.setUsedSpace(diskDto.getUsedSpace());
+            disk.setFreeSpace(diskDto.getFreeSpace());
+            disk.setDiskUsagePercentage(diskDto.getDiskUsagePercentage());
+            disk.setLastUpdated(LocalDateTime.now());
+            assetDiskRepository.save(disk);
+
+            // Trigger Playbook if usage >= threshold
+            if (disk.getDiskUsagePercentage() != null && disk.getDiskUsagePercentage() >= threshold) {
+                // Check active incidents for this asset & drive
+                Optional<Incident> activeInc = incidentRepository.findAll().stream()
+                        .filter(i -> "Low Disk Space Detected".equals(i.getTitle())
+                                && i.getAsset() != null && i.getAsset().getId().equals(asset.getId())
+                                && disk.getDriveName().equals(i.getDriveName())
+                                && ("Open".equalsIgnoreCase(i.getStatus()) || "Investigating".equalsIgnoreCase(i.getStatus())))
+                        .findFirst();
+
+                if (activeInc.isEmpty()) {
+                    // Create incident
+                    Incident incident = Incident.builder()
+                            .title("Low Disk Space Detected")
+                            .description(String.format("Drive %s on host %s has reached critical usage of %.1f%% (%.2f GB free remaining).",
+                                    disk.getDriveName(), asset.getHostname(), disk.getDiskUsagePercentage(), disk.getFreeSpace()))
+                            .severity("Medium")
+                            .status("Open")
+                            .source("Asset Monitor")
+                            .priority("P3")
+                            .asset(asset)
+                            .driveName(disk.getDriveName())
+                            .diskUsagePercentage(disk.getDiskUsagePercentage())
+                            .freeSpaceRemaining(disk.getFreeSpace())
+                            .detectionTime(LocalDateTime.now())
+                            .build();
+
+                    Incident savedIncident = incidentRepository.save(incident);
+
+                    auditLogService.createLog(
+                            "CREATE",
+                            "Incident automatically generated: " + savedIncident.getTitle() + " on drive " + disk.getDriveName(),
+                            null,
+                            savedIncident
+                    );
+
+                    // Trigger playbook automatically
+                    try {
+                        playbookService.triggerLowDiskSpacePlaybook(savedIncident);
+                    } catch (Exception e) {
+                        System.err.println("Failed to trigger Low Disk Space playbook: " + e.getMessage());
+                    }
+                }
+            }
+
+            // Auto-resolve incident if usage < recoveryThreshold
+            if (disk.getDiskUsagePercentage() != null && disk.getDiskUsagePercentage() < recoveryThreshold) {
+                // Find active incident for this asset & drive
+                Optional<Incident> activeInc = incidentRepository.findAll().stream()
+                        .filter(i -> "Low Disk Space Detected".equals(i.getTitle())
+                                && i.getAsset() != null && i.getAsset().getId().equals(asset.getId())
+                                && disk.getDriveName().equals(i.getDriveName())
+                                && ("Open".equalsIgnoreCase(i.getStatus()) || "Investigating".equalsIgnoreCase(i.getStatus())))
+                        .findFirst();
+
+                if (activeInc.isPresent()) {
+                    Incident incident = activeInc.get();
+                    incident.setStatus("Resolved");
+                    incidentRepository.save(incident);
+
+                    auditLogService.createLog(
+                            "RESOLVE",
+                            "Incident resolved automatically: disk usage on drive " + disk.getDriveName() + " is now " + disk.getDiskUsagePercentage() + "%",
+                            null,
+                            incident
+                    );
+                }
             }
         }
     }

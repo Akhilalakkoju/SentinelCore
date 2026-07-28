@@ -5,7 +5,7 @@ DB_CONFIG = {
     "port": 5432,
     "database": "sentinelcore",
     "user": "postgres",
-    "password": "postgres"
+    "password": "postgres123"
 }
 
 

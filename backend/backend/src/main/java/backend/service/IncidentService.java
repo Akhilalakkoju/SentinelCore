@@ -284,6 +284,10 @@ public class IncidentService {
                 .priority(incident.getPriority())
                 .escalated(incident.getEscalated())
                 .slaDeadline(incident.getSlaDeadline())
+                .driveName(incident.getDriveName())
+                .diskUsagePercentage(incident.getDiskUsagePercentage())
+                .freeSpaceRemaining(incident.getFreeSpaceRemaining())
+                .detectionTime(incident.getDetectionTime())
                 .createdAt(incident.getCreatedAt())
                 .updatedAt(incident.getUpdatedAt());
 
@@ -307,7 +311,8 @@ public class IncidentService {
 
         if (incident.getAsset() != null) {
             builder.assetId(incident.getAsset().getId())
-                   .assetName(incident.getAsset().getAssetName());
+                   .assetName(incident.getAsset().getAssetName())
+                   .assetIpAddress(incident.getAsset().getIpAddress());
         }
 
         return builder.build();
@@ -321,6 +326,10 @@ public class IncidentService {
                 .severity(dto.getSeverity())
                 .status(dto.getStatus())
                 .source(dto.getSource())
+                .driveName(dto.getDriveName())
+                .diskUsagePercentage(dto.getDiskUsagePercentage())
+                .freeSpaceRemaining(dto.getFreeSpaceRemaining())
+                .detectionTime(dto.getDetectionTime())
                 .priority(dto.getPriority() != null ? dto.getPriority() : "P3");
 
         if (dto.getAssignedToId() != null) {

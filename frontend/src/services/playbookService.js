@@ -17,6 +17,12 @@ const playbookService = {
     return response.data;
   },
 
+  // Get playbook execution statistics and history details
+  getPlaybookDetails: async (id) => {
+    const response = await api.get(`/playbooks/${id}/details`);
+    return response.data;
+  },
+
   // Create new playbook configuration
   createPlaybook: async (playbookData) => {
     const response = await api.post("/playbooks", playbookData);

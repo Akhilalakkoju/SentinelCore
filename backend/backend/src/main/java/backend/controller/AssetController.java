@@ -41,6 +41,12 @@ public class AssetController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/disk-metrics")
+    public ResponseEntity<?> processDiskMetrics(@RequestBody backend.dto.AssetDiskReportDto dto) {
+        assetService.processDiskMetrics(dto);
+        return ResponseEntity.ok().build();
+    }
+
     // Get paginated, sorted, and filtered assets
     @GetMapping
     public Page<AssetDto> getAssets(

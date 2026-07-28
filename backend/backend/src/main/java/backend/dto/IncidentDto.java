@@ -38,6 +38,11 @@ public class IncidentDto {
     private LocalDateTime slaDeadline;
     private Long assetId;
     private String assetName;
+    private String assetIpAddress;
+    private String driveName;
+    private Double diskUsagePercentage;
+    private Double freeSpaceRemaining;
+    private LocalDateTime detectionTime;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<KnowledgeBaseArticleSummaryDto> linkedArticles;
