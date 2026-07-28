@@ -1,0 +1,265 @@
+{
+  "executionTime": "2026-07-28T12:55:00.028Z",
+  "totalChecks": 25,
+  "passedChecks": 17,
+  "failedChecks": 8,
+  "severityBreakdown": {
+    "CRITICAL": 0,
+    "HIGH": 5,
+    "MEDIUM": 2,
+    "LOW": 1,
+    "INFORMATIONAL": 0
+  },
+  "findings": [
+    {
+      "checkName": "RBAC API Permission Matrix: VIEWER -> GET /api/users",
+      "category": "RBAC Matrix",
+      "endpointOrPage": "/api/users",
+      "severity": "CRITICAL",
+      "status": "PASSED",
+      "details": "Role VIEWER attempted GET /api/users. Received HTTP Status: 403",
+      "recommendation": "Ensure Spring Security .hasRole() annotations protect privileged REST endpoints.",
+      "timestamp": "2026-07-28T12:54:45.990Z"
+    },
+    {
+      "checkName": "RBAC API Permission Matrix: ANALYST -> GET /api/users",
+      "category": "RBAC Matrix",
+      "endpointOrPage": "/api/users",
+      "severity": "CRITICAL",
+      "status": "PASSED",
+      "details": "Role ANALYST attempted GET /api/users. Received HTTP Status: 403",
+      "recommendation": "Ensure Spring Security .hasRole() annotations protect privileged REST endpoints.",
+      "timestamp": "2026-07-28T12:54:46.043Z"
+    },
+    {
+      "checkName": "RBAC API Permission Matrix: VIEWER -> GET /api/roles",
+      "category": "RBAC Matrix",
+      "endpointOrPage": "/api/roles",
+      "severity": "CRITICAL",
+      "status": "PASSED",
+      "details": "Role VIEWER attempted GET /api/roles. Received HTTP Status: 403",
+      "recommendation": "Ensure Spring Security .hasRole() annotations protect privileged REST endpoints.",
+      "timestamp": "2026-07-28T12:54:46.080Z"
+    },
+    {
+      "checkName": "RBAC API Permission Matrix: ANALYST -> GET /api/roles",
+      "category": "RBAC Matrix",
+      "endpointOrPage": "/api/roles",
+      "severity": "CRITICAL",
+      "status": "PASSED",
+      "details": "Role ANALYST attempted GET /api/roles. Received HTTP Status: 403",
+      "recommendation": "Ensure Spring Security .hasRole() annotations protect privileged REST endpoints.",
+      "timestamp": "2026-07-28T12:54:46.117Z"
+    },
+    {
+      "checkName": "RBAC API Permission Matrix: VIEWER -> POST /api/threats",
+      "category": "RBAC Matrix",
+      "endpointOrPage": "/api/threats",
+      "severity": "CRITICAL",
+      "status": "PASSED",
+      "details": "Role VIEWER attempted POST /api/threats. Received HTTP Status: 403",
+      "recommendation": "Ensure Spring Security .hasRole() annotations protect privileged REST endpoints.",
+      "timestamp": "2026-07-28T12:54:46.161Z"
+    },
+    {
+      "checkName": "RBAC API Permission Matrix: VIEWER -> DELETE /api/threats/1",
+      "category": "RBAC Matrix",
+      "endpointOrPage": "/api/threats/1",
+      "severity": "CRITICAL",
+      "status": "PASSED",
+      "details": "Role VIEWER attempted DELETE /api/threats/1. Received HTTP Status: 403",
+      "recommendation": "Ensure Spring Security .hasRole() annotations protect privileged REST endpoints.",
+      "timestamp": "2026-07-28T12:54:46.196Z"
+    },
+    {
+      "checkName": "RBAC API Permission Matrix: ANALYST -> DELETE /api/threats/1",
+      "category": "RBAC Matrix",
+      "endpointOrPage": "/api/threats/1",
+      "severity": "CRITICAL",
+      "status": "PASSED",
+      "details": "Role ANALYST attempted DELETE /api/threats/1. Received HTTP Status: 403",
+      "recommendation": "Ensure Spring Security .hasRole() annotations protect privileged REST endpoints.",
+      "timestamp": "2026-07-28T12:54:46.234Z"
+    },
+    {
+      "checkName": "RBAC API Permission Matrix: VIEWER -> DELETE /api/alerts/1",
+      "category": "RBAC Matrix",
+      "endpointOrPage": "/api/alerts/1",
+      "severity": "CRITICAL",
+      "status": "PASSED",
+      "details": "Role VIEWER attempted DELETE /api/alerts/1. Received HTTP Status: 403",
+      "recommendation": "Ensure Spring Security .hasRole() annotations protect privileged REST endpoints.",
+      "timestamp": "2026-07-28T12:54:46.277Z"
+    },
+    {
+      "checkName": "RBAC API Permission Matrix: ANALYST -> DELETE /api/alerts/1",
+      "category": "RBAC Matrix",
+      "endpointOrPage": "/api/alerts/1",
+      "severity": "CRITICAL",
+      "status": "PASSED",
+      "details": "Role ANALYST attempted DELETE /api/alerts/1. Received HTTP Status: 403",
+      "recommendation": "Ensure Spring Security .hasRole() annotations protect privileged REST endpoints.",
+      "timestamp": "2026-07-28T12:54:46.314Z"
+    },
+    {
+      "checkName": "RBAC UI Navigation Restriction: VIEWER -> /users",
+      "category": "RBAC Matrix",
+      "endpointOrPage": "/users",
+      "severity": "HIGH",
+      "status": "FAILED",
+      "details": "Role VIEWER attempted navigation to /users. Current URL: http://localhost:5173/users",
+      "recommendation": "Ensure frontend router enforces role-based guard for admin-only pages.",
+      "timestamp": "2026-07-28T12:54:48.572Z"
+    },
+    {
+      "checkName": "RBAC UI Navigation Restriction: VIEWER -> /roles",
+      "category": "RBAC Matrix",
+      "endpointOrPage": "/roles",
+      "severity": "HIGH",
+      "status": "FAILED",
+      "details": "Role VIEWER attempted navigation to /roles. Current URL: http://localhost:5173/roles",
+      "recommendation": "Ensure frontend router enforces role-based guard for admin-only pages.",
+      "timestamp": "2026-07-28T12:54:48.874Z"
+    },
+    {
+      "checkName": "RBAC UI Navigation Restriction: ANALYST -> /users",
+      "category": "RBAC Matrix",
+      "endpointOrPage": "/users",
+      "severity": "HIGH",
+      "status": "FAILED",
+      "details": "Role ANALYST attempted navigation to /users. Current URL: http://localhost:5173/users",
+      "recommendation": "Ensure frontend router enforces role-based guard for admin-only pages.",
+      "timestamp": "2026-07-28T12:54:50.365Z"
+    },
+    {
+      "checkName": "RBAC UI Navigation Restriction: ANALYST -> /roles",
+      "category": "RBAC Matrix",
+      "endpointOrPage": "/roles",
+      "severity": "HIGH",
+      "status": "FAILED",
+      "details": "Role ANALYST attempted navigation to /roles. Current URL: http://localhost:5173/roles",
+      "recommendation": "Ensure frontend router enforces role-based guard for admin-only pages.",
+      "timestamp": "2026-07-28T12:54:50.888Z"
+    },
+    {
+      "checkName": "Security Header Verification: x-frame-options",
+      "category": "Header Verification",
+      "endpointOrPage": "/",
+      "severity": "MEDIUM",
+      "status": "FAILED",
+      "details": "Header x-frame-options is missing",
+      "recommendation": "Configure Spring Security or Web server to include x-frame-options header.",
+      "timestamp": "2026-07-28T12:54:53.454Z"
+    },
+    {
+      "checkName": "Security Header Verification: x-content-type-options",
+      "category": "Header Verification",
+      "endpointOrPage": "/",
+      "severity": "LOW",
+      "status": "FAILED",
+      "details": "Header x-content-type-options is missing",
+      "recommendation": "Configure Spring Security or Web server to include x-content-type-options header.",
+      "timestamp": "2026-07-28T12:54:53.454Z"
+    },
+    {
+      "checkName": "Security Header Verification: content-security-policy",
+      "category": "Header Verification",
+      "endpointOrPage": "/",
+      "severity": "MEDIUM",
+      "status": "FAILED",
+      "details": "Header content-security-policy is missing",
+      "recommendation": "Configure Spring Security or Web server to include content-security-policy header.",
+      "timestamp": "2026-07-28T12:54:53.454Z"
+    },
+    {
+      "checkName": "Security Header Verification: strict-transport-security",
+      "category": "Header Verification",
+      "endpointOrPage": "/",
+      "severity": "HIGH",
+      "status": "FAILED",
+      "details": "Header strict-transport-security is missing",
+      "recommendation": "Configure Spring Security or Web server to include strict-transport-security header.",
+      "timestamp": "2026-07-28T12:54:53.454Z"
+    },
+    {
+      "checkName": "Client-side Session Token Clearing on Logout",
+      "category": "Session Handling",
+      "endpointOrPage": "/login",
+      "severity": "HIGH",
+      "status": "PASSED",
+      "details": "JWT Token properly cleared from localStorage",
+      "recommendation": "Ensure logout handler purges token from client storage.",
+      "timestamp": "2026-07-28T12:54:56.365Z"
+    },
+    {
+      "checkName": "Client-side Form Input Context Handling",
+      "category": "Session Handling",
+      "endpointOrPage": "/login",
+      "severity": "MEDIUM",
+      "status": "PASSED",
+      "details": "React controlled input handles value safely without script execution.",
+      "recommendation": "Use React controlled inputs to prevent DOM injection risks.",
+      "timestamp": "2026-07-28T12:54:59.448Z"
+    },
+    {
+      "checkName": "Unauthenticated API Endpoint Access: /api/users",
+      "category": "API Authorization",
+      "endpointOrPage": "/api/users",
+      "severity": "HIGH",
+      "status": "PASSED",
+      "details": "HTTP Response Status: 403",
+      "recommendation": "Ensure Spring Security restricts API endpoint to authenticated JWT sessions.",
+      "timestamp": "2026-07-28T12:54:59.906Z"
+    },
+    {
+      "checkName": "Unauthenticated API Endpoint Access: /api/roles",
+      "category": "API Authorization",
+      "endpointOrPage": "/api/roles",
+      "severity": "HIGH",
+      "status": "PASSED",
+      "details": "HTTP Response Status: 403",
+      "recommendation": "Ensure Spring Security restricts API endpoint to authenticated JWT sessions.",
+      "timestamp": "2026-07-28T12:54:59.933Z"
+    },
+    {
+      "checkName": "Unauthenticated API Endpoint Access: /api/threats",
+      "category": "API Authorization",
+      "endpointOrPage": "/api/threats",
+      "severity": "HIGH",
+      "status": "PASSED",
+      "details": "HTTP Response Status: 403",
+      "recommendation": "Ensure Spring Security restricts API endpoint to authenticated JWT sessions.",
+      "timestamp": "2026-07-28T12:54:59.952Z"
+    },
+    {
+      "checkName": "Unauthenticated API Endpoint Access: /api/alerts",
+      "category": "API Authorization",
+      "endpointOrPage": "/api/alerts",
+      "severity": "HIGH",
+      "status": "PASSED",
+      "details": "HTTP Response Status: 403",
+      "recommendation": "Ensure Spring Security restricts API endpoint to authenticated JWT sessions.",
+      "timestamp": "2026-07-28T12:54:59.970Z"
+    },
+    {
+      "checkName": "Unauthenticated API Endpoint Access: /api/reports/dashboard",
+      "category": "API Authorization",
+      "endpointOrPage": "/api/reports/dashboard",
+      "severity": "HIGH",
+      "status": "PASSED",
+      "details": "HTTP Response Status: 403",
+      "recommendation": "Ensure Spring Security restricts API endpoint to authenticated JWT sessions.",
+      "timestamp": "2026-07-28T12:54:59.988Z"
+    },
+    {
+      "checkName": "Unauthenticated API Endpoint Access: /api/ioc",
+      "category": "API Authorization",
+      "endpointOrPage": "/api/ioc",
+      "severity": "HIGH",
+      "status": "PASSED",
+      "details": "HTTP Response Status: 403",
+      "recommendation": "Ensure Spring Security restricts API endpoint to authenticated JWT sessions.",
+      "timestamp": "2026-07-28T12:55:00.005Z"
+    }
+  ]
+}
