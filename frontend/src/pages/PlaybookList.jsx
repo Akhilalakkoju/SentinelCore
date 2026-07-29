@@ -506,6 +506,7 @@ function PlaybookList() {
                               <option value="VERIFY_HEARTBEAT">Verify Heartbeat</option>
                               <option value="IDENTIFY_CRITICALITY">Identify Criticality</option>
                               <option value="TRIGGER_DIAGNOSTICS">Trigger Diagnostics</option>
+                              <option value="DETECT_USB">Detect USB</option>
                             </select>
 
                             <input

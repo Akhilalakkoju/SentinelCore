@@ -6,6 +6,8 @@ import uuid
 import getpass
 import psutil
 import requests
+import subprocess
+import json
 from datetime import datetime
 
 BACKEND_URL = "http://localhost:8080/api"
@@ -37,6 +39,59 @@ def get_device_type():
     if system == "Linux" or "server" in platform.platform().lower():
         return "Server"
     return "Workstation"
+
+def get_usb_devices():
+    devices = []
+    if platform.system() == "Windows":
+        try:
+            cmd = 'powershell -Command "Get-PnpDevice -PresentOnly -Class USBDevice, WPD, USB | Select-Object FriendlyName, InstanceId, Class | ConvertTo-Json"'
+            result = subprocess.run(cmd, capture_output=True, text=True, shell=True)
+            if result.returncode == 0 and result.stdout.strip():
+                data = json.loads(result.stdout)
+                if isinstance(data, dict):
+                    data = [data]
+                for dev in data:
+                    name = dev.get('FriendlyName', '')
+                    inst_id = dev.get('InstanceId', '')
+                    if not name:
+                        continue
+                    name_lower = name.lower()
+                    inst_lower = inst_id.lower()
+                    # Filter out hubs, host controllers, composite devices, cameras and DFU devices
+                    if 'root hub' in name_lower or 'host controller' in name_lower or 'composite device' in name_lower:
+                        continue
+                    if 'camera' in name_lower or 'dfu' in name_lower:
+                        continue
+                    if 'root_hub' in inst_lower or 'controller' in inst_lower:
+                        continue
+                    devices.append(name)
+        except Exception as e:
+            print(f"Error checking USB devices: {e}")
+    else:
+        # Linux fallback
+        try:
+            if os.path.exists('/sys/bus/usb/devices/'):
+                for dev in os.listdir('/sys/bus/usb/devices/'):
+                    prod_path = os.path.join('/sys/bus/usb/devices/', dev, 'product')
+                    if os.path.exists(prod_path):
+                        with open(prod_path, 'r') as f:
+                            prod_name = f.read().strip()
+                            prod_lower = prod_name.lower()
+                            if prod_name and 'root hub' not in prod_lower and 'host controller' not in prod_lower and 'camera' not in prod_lower and 'dfu' not in prod_lower:
+                                devices.append(prod_name)
+        except Exception:
+            pass
+
+    # Check for AC Power Charger
+    try:
+        if hasattr(psutil, "sensors_battery"):
+            battery = psutil.sensors_battery()
+            if battery is not None and battery.power_plugged:
+                devices.append("AC Power Charger")
+    except Exception:
+        pass
+
+    return devices
 
 def collect_static_info():
     hostname = socket.gethostname()
@@ -170,15 +225,20 @@ def main():
 
         try:
             metrics = collect_dynamic_metrics()
+            usb_list = get_usb_devices()
+            usb_connected = len(usb_list) > 0
+            usb_str = ",".join(usb_list)
             payload = {
                 "hostname": static_info.get("hostname"),
                 "macAddress": static_info.get("macAddress"),
                 "cpuUsage": metrics["cpuUsage"],
                 "ramUsage": metrics["ramUsage"],
-                "diskUsage": metrics["diskUsage"]
+                "diskUsage": metrics["diskUsage"],
+                "usbConnected": usb_connected,
+                "usbDevices": usb_str
             }
             
-            print(f"[{datetime.now().strftime('%H:%M:%S')}] Sending heartbeat: CPU={payload['cpuUsage']}%, RAM={payload['ramUsage']}%, Disk={payload['diskUsage']}%")
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] Sending heartbeat: CPU={payload['cpuUsage']}%, RAM={payload['ramUsage']}%, Disk={payload['diskUsage']}%, USB={payload['usbConnected']} ({payload['usbDevices']})")
             response = requests.post(f"{BACKEND_URL}/assets/heartbeat", json=payload)
             
             if response.status_code == 404:

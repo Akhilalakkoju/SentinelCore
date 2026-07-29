@@ -95,6 +95,7 @@ public class PlaybookService {
                 seedPhishingPlaybook();
                 seedAssetOfflinePlaybook();
                 seedLowDiskSpacePlaybook();
+                seedUsbDetectionPlaybook();
 
                 // Resolve any stuck PENDING executions on startup
                 List<PlaybookExecution> stuckExecs = playbookExecutionRepository.findAll();
@@ -540,6 +541,41 @@ public class PlaybookService {
                 }
         }
 
+        private void seedUsbDetectionPlaybook() {
+                if (playbookRepository.findByName("USB Detection Playbook").isEmpty()) {
+                        log.info("Seeding USB Detection Playbook...");
+                        Playbook usbDetection = Playbook.builder()
+                                        .name("USB Detection Playbook")
+                                        .description("Fires when a USB connection is detected on an online asset. Automatically verifies USB status and notifies the SOC team.")
+                                        .triggerType("ALERT_TYPE")
+                                        .triggerValue("USB Connection")
+                                        .conditionsJson("{\"autoTrigger\":true}")
+                                        .estimatedTime("5 minutes")
+                                        .isActive(true)
+                                        .build();
+
+                        usbDetection = playbookRepository.save(usbDetection);
+
+                        PlaybookStep step1 = PlaybookStep.builder()
+                                        .playbook(usbDetection)
+                                        .stepOrder(1)
+                                        .name("Detect USB connection status")
+                                        .actionType("DETECT_USB")
+                                        .parametersJson("{}")
+                                        .build();
+
+                        PlaybookStep step2 = PlaybookStep.builder()
+                                        .playbook(usbDetection)
+                                        .stepOrder(2)
+                                        .name("Notify SOC Response Team")
+                                        .actionType("SEND_NOTIFICATION")
+                                        .parametersJson("{\"channel\":\"IN_APP\",\"recipient\":\"ADMIN\",\"severity\":\"High\"}")
+                                        .build();
+
+                        playbookStepRepository.saveAll(List.of(step1, step2));
+                }
+        }
+
         // ================= Config CRUD Operations =================
         @Transactional(readOnly = true)
         public List<PlaybookDto> getAllPlaybooks() {
@@ -888,10 +924,19 @@ public class PlaybookService {
         private void runAsyncExecution(Long executionId, Long playbookId) {
                 CompletableFuture.runAsync(() -> {
                         try {
-                                // Fetch execution in this thread context
-                                PlaybookExecution execution = playbookExecutionRepository.findById(executionId)
-                                                .orElseThrow(() -> new RuntimeException(
-                                                                                "Execution not found: " + executionId));
+                                // Fetch execution in this thread context (with retry to avoid transaction race conditions)
+                                PlaybookExecution execution = null;
+                                for (int attempt = 0; attempt < 10; attempt++) {
+                                        java.util.Optional<PlaybookExecution> opt = playbookExecutionRepository.findById(executionId);
+                                        if (opt.isPresent()) {
+                                                execution = opt.get();
+                                                break;
+                                        }
+                                        Thread.sleep(100);
+                                }
+                                if (execution == null) {
+                                        throw new RuntimeException("Execution not found: " + executionId);
+                                }
 
                                 List<PlaybookStep> steps = playbookStepRepository.findByPlaybookIdOrderByStepOrderAsc(playbookId);
 
@@ -1162,6 +1207,26 @@ public class PlaybookService {
 
                                         writeExecutionLog(execution, step.getName(), "SUCCESS", "INFO",
                                                 "Action: Sent alert notification to Administrator.");
+                                } else if ("USB Detection Playbook".equals(execution.getPlaybookName())) {
+                                        Incident targetIncident = execution.getIncident();
+                                        String assetName = (targetIncident != null && targetIncident.getAsset() != null)
+                                                ? targetIncident.getAsset().getHostname()
+                                                : "Unknown Asset";
+                                        String usbDevices = (targetIncident != null && targetIncident.getAsset() != null)
+                                                ? targetIncident.getAsset().getUsbDevices()
+                                                : "Unknown USB Device";
+
+                                        if (notificationService != null) {
+                                                notificationService.saveNotification(
+                                                        "USB Connection Detected",
+                                                        "High",
+                                                        String.format("Asset: %s is ONLINE and a USB device (%s) has been connected.", 
+                                                                assetName, usbDevices)
+                                                );
+                                        }
+
+                                        writeExecutionLog(execution, step.getName(), "SUCCESS", "INFO",
+                                                "Action: Sent alert notification to SOC Team.");
                                 } else {
                                         writeExecutionLog(execution, step.getName(), "RUNNING", "INFO",
                                                         "Compiling alert email/Slack template...");
@@ -1186,6 +1251,26 @@ public class PlaybookService {
 
                                         writeExecutionLog(execution, step.getName(), "RUNNING", "INFO", "Alert sent to: "
                                                         + notif.getRecipient() + " over " + notif.getChannel());
+                                }
+                                break;
+                        case "DETECT_USB":
+                                writeExecutionLog(execution, step.getName(), "RUNNING", "INFO",
+                                                "Checking recent heartbeat logs for USB device connection...");
+                                Thread.sleep(200);
+                                Incident usbInc = execution.getIncident();
+                                if (usbInc != null && usbInc.getAsset() != null) {
+                                        Asset usbAsset = usbInc.getAsset();
+                                        if ("ONLINE".equals(usbAsset.getStatus()) && usbAsset.getUsbConnected() != null && usbAsset.getUsbConnected()) {
+                                                writeExecutionLog(execution, step.getName(), "SUCCESS", "INFO",
+                                                                "USB Connection detected: Asset " + usbAsset.getHostname() + 
+                                                                " is ONLINE and USB device connected: " + usbAsset.getUsbDevices());
+                                        } else {
+                                                writeExecutionLog(execution, step.getName(), "SUCCESS", "WARN",
+                                                                "USB Connection check completed: No active USB connection detected (asset offline or disconnected).");
+                                        }
+                                } else {
+                                        writeExecutionLog(execution, step.getName(), "SUCCESS", "INFO",
+                                                        "USB device connection detected and verified.");
                                 }
                                 break;
                         case "CLEAN_DISK":
@@ -1681,6 +1766,43 @@ public class PlaybookService {
 
                 saveAuditLog("TRIGGER_PLAYBOOK", execution.getId(),
                                 "Automatically triggered Low Disk Space Playbook for Incident ID: " + incident.getId());
+
+                return convertToExecutionDto(execution);
+        }
+
+        @Transactional
+        public PlaybookExecutionDto triggerUsbDetectionPlaybook(Incident incident) {
+                Playbook playbook = playbookRepository.findByName("USB Detection Playbook")
+                                .orElseGet(() -> {
+                                        seedUsbDetectionPlaybook();
+                                        return playbookRepository.findByName("USB Detection Playbook")
+                                                         .orElseThrow(() -> new RuntimeException("USB Detection playbook not seeded"));
+                                });
+
+                if (!playbook.getIsActive()) {
+                        log.info("USB Detection playbook is inactive, skipping execution.");
+                        return null;
+                }
+
+                PlaybookExecution execution = PlaybookExecution.builder()
+                                .playbook(playbook)
+                                .playbookName(playbook.getName())
+                                .incident(incident)
+                                .incidentId(incident.getId())
+                                .status("PENDING")
+                                .currentStep("Queued for execution")
+                                .currentStepIndex(0)
+                                .progress(0)
+                                .startedAt(LocalDateTime.now())
+                                .build();
+
+                execution = playbookExecutionRepository.save(execution);
+
+                // Run asynchronously
+                runAsyncExecution(execution.getId(), playbook.getId());
+
+                saveAuditLog("TRIGGER_PLAYBOOK", execution.getId(),
+                                "Automatically triggered USB Detection Playbook for Incident ID: " + incident.getId());
 
                 return convertToExecutionDto(execution);
         }
@@ -2219,17 +2341,20 @@ public class PlaybookService {
                 boolean isLocationIncident = incWords.stream().anyMatch(w -> wordsMatchFuzzy("location", w) || wordsMatchFuzzy("login", w) || wordsMatchFuzzy("unauthorized", w) || wordsMatchFuzzy("geoip", w));
                 boolean isBruteForceIncident = incWords.stream().anyMatch(w -> wordsMatchFuzzy("brute", w));
                 boolean isPrivEscIncident = incWords.stream().anyMatch(w -> wordsMatchFuzzy("privilege", w));
+                boolean isUsbIncident = incWords.stream().anyMatch(w -> wordsMatchFuzzy("usb", w));
 
                 boolean isVulnPlaybook = pbName.contains("vulnerability") || pbName.contains("scan");
                 boolean isLocationPlaybook = pbName.contains("location") || pbName.contains("unauthorized") || pbName.contains("login");
                 boolean isBruteForcePlaybook = pbName.contains("brute");
                 boolean isPrivEscPlaybook = pbName.contains("privilege");
+                boolean isUsbPlaybook = pbName.contains("usb");
 
                 // Recommended matching
                 if (isLocationIncident && isLocationPlaybook) return "RECOMMENDED";
                 if (isBruteForceIncident && isBruteForcePlaybook) return "RECOMMENDED";
                 if (isPrivEscIncident && isPrivEscPlaybook) return "RECOMMENDED";
-                if (isVulnIncident && isVulnPlaybook && !isLocationIncident && !isBruteForceIncident && !isPrivEscIncident) {
+                if (isUsbIncident && isUsbPlaybook) return "RECOMMENDED";
+                if (isVulnIncident && isVulnPlaybook && !isLocationIncident && !isBruteForceIncident && !isPrivEscIncident && !isUsbIncident) {
                         return "RECOMMENDED";
                 }
 

@@ -51,7 +51,8 @@ CREATE TABLE IF NOT EXISTS playbook_steps (
         'DECISION_CONTAINMENT',
         'VERIFY_HEARTBEAT',
         'IDENTIFY_CRITICALITY',
-        'TRIGGER_DIAGNOSTICS'
+        'TRIGGER_DIAGNOSTICS',
+        'DETECT_USB'
     )),
     parameters_json TEXT, -- JSON arguments for step actions
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

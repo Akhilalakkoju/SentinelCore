@@ -546,20 +546,24 @@ public class AssetService {
 
         Asset asset = existingOpt.orElseThrow(() -> new ResourceNotFoundException("Asset not found for heartbeat: " + dto.getHostname()));
 
-        String oldValue = String.format("Status: %s, CPU: %s%%, RAM: %s%%, Disk: %s%%",
-                asset.getStatus(), asset.getCpuUsage(), asset.getRamUsage(), asset.getDiskUsage());
+        Boolean wasUsbConnected = asset.getUsbConnected();
+
+        String oldValue = String.format("Status: %s, CPU: %s%%, RAM: %s%%, Disk: %s%%, USB: %s",
+                asset.getStatus(), asset.getCpuUsage(), asset.getRamUsage(), asset.getDiskUsage(), asset.getUsbConnected());
 
         asset.setStatus("ONLINE");
         asset.setCpuUsage(dto.getCpuUsage());
         asset.setRamUsage(dto.getRamUsage());
         asset.setDiskUsage(dto.getDiskUsage());
+        asset.setUsbConnected(dto.getUsbConnected());
+        asset.setUsbDevices(dto.getUsbDevices());
         asset.setLastSeen(LocalDateTime.now());
 
         Asset saved = assetRepository.save(asset);
         activeOnlineAssetIds.add(saved.getId());
 
-        String newValue = String.format("Status: ONLINE, CPU: %s%%, RAM: %s%%, Disk: %s%%",
-                saved.getCpuUsage(), saved.getRamUsage(), saved.getDiskUsage());
+        String newValue = String.format("Status: ONLINE, CPU: %s%%, RAM: %s%%, Disk: %s%%, USB: %s (%s)",
+                saved.getCpuUsage(), saved.getRamUsage(), saved.getDiskUsage(), saved.getUsbConnected(), saved.getUsbDevices());
 
         auditLogService.createAssetLog(
                 "HEARTBEAT",
@@ -592,6 +596,67 @@ public class AssetService {
                     "High",
                     String.format("Asset %s disk space is almost full: %.1f%% used", saved.getHostname(), saved.getDiskUsage())
             );
+        }
+
+        // Trigger USB Detection Playbook only if usbConnected transitioned from false/null to true
+        boolean newlyConnected = (saved.getUsbConnected() != null && saved.getUsbConnected()) 
+                && (wasUsbConnected == null || !wasUsbConnected);
+
+        if (newlyConnected) {
+            Optional<Incident> activeInc = incidentRepository.findAll().stream()
+                    .filter(i -> "USB Connection Detected".equals(i.getTitle())
+                            && i.getAsset() != null && i.getAsset().getId().equals(saved.getId())
+                            && ("Open".equalsIgnoreCase(i.getStatus()) || "Investigating".equalsIgnoreCase(i.getStatus())))
+                    .findFirst();
+
+            if (activeInc.isEmpty()) {
+                Incident incident = Incident.builder()
+                        .title("USB Connection Detected")
+                        .description(String.format("USB device connection detected on host %s. Connected devices: %s",
+                                saved.getHostname(), saved.getUsbDevices()))
+                        .severity("High")
+                        .status("Open")
+                        .source("Asset Monitor")
+                        .priority("P2")
+                        .asset(saved)
+                        .detectionTime(LocalDateTime.now())
+                        .build();
+
+                Incident savedIncident = incidentRepository.save(incident);
+
+                auditLogService.createLog(
+                        "CREATE",
+                        "Incident automatically generated: " + savedIncident.getTitle() + " on host " + saved.getHostname(),
+                        null,
+                        savedIncident
+                );
+
+                try {
+                    playbookService.triggerUsbDetectionPlaybook(savedIncident);
+                } catch (Exception e) {
+                    System.err.println("Failed to trigger USB Detection playbook: " + e.getMessage());
+                }
+            }
+        } else {
+            // Auto-resolve USB Incident if disconnected
+            Optional<Incident> activeInc = incidentRepository.findAll().stream()
+                    .filter(i -> "USB Connection Detected".equals(i.getTitle())
+                            && i.getAsset() != null && i.getAsset().getId().equals(saved.getId())
+                            && ("Open".equalsIgnoreCase(i.getStatus()) || "Investigating".equalsIgnoreCase(i.getStatus())))
+                    .findFirst();
+
+            if (activeInc.isPresent()) {
+                Incident incident = activeInc.get();
+                incident.setStatus("Resolved");
+                incidentRepository.save(incident);
+
+                auditLogService.createLog(
+                        "RESOLVE",
+                        "Incident resolved automatically: USB device disconnected from host " + saved.getHostname(),
+                        null,
+                        incident
+                );
+            }
         }
     }
 

@@ -98,6 +98,12 @@ public class Asset {
     @Builder.Default
     private Boolean agentInstalled = false;
 
+    @Column(name = "usb_connected")
+    private Boolean usbConnected;
+
+    @Column(name = "usb_devices", columnDefinition = "TEXT")
+    private String usbDevices;
+
     @CreatedDate
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

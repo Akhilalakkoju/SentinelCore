@@ -15,4 +15,6 @@ public class AssetHeartbeatDto {
     private Double cpuUsage;
     private Double ramUsage;
     private Double diskUsage;
+    private Boolean usbConnected;
+    private String usbDevices;
 }

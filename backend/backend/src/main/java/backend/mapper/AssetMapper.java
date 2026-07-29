@@ -38,6 +38,8 @@ public class AssetMapper {
                 .freeStorage(asset.getFreeStorage())
                 .totalRam(asset.getTotalRam())
                 .agentInstalled(asset.getAgentInstalled())
+                .usbConnected(asset.getUsbConnected())
+                .usbDevices(asset.getUsbDevices())
                 .createdAt(asset.getCreatedAt())
                 .updatedAt(asset.getUpdatedAt())
                 .build();
@@ -74,6 +76,8 @@ public class AssetMapper {
                 .freeStorage(dto.getFreeStorage())
                 .totalRam(dto.getTotalRam())
                 .agentInstalled(dto.getAgentInstalled())
+                .usbConnected(dto.getUsbConnected())
+                .usbDevices(dto.getUsbDevices())
                 .build();
     }
 }

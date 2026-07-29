@@ -88,6 +88,8 @@ public class AssetDto {
     private Double freeStorage;
     private Double totalRam;
     private Boolean agentInstalled;
+    private Boolean usbConnected;
+    private String usbDevices;
 
     private LocalDateTime createdAt;
 
