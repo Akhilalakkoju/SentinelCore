@@ -14,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import org.springframework.context.annotation.Lazy;
+
 @Component
 @SuppressWarnings("null")
 public class DataInitializer implements CommandLineRunner {
@@ -25,6 +27,7 @@ public class DataInitializer implements CommandLineRunner {
     private UserRepository userRepository;
 
     @Autowired
+    @Lazy
     private PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -76,11 +79,6 @@ public class DataInitializer implements CommandLineRunner {
         seedKnowledgeBase();
         seedNotifications();
         seedAuditLogs();
-        
-        // Trigger external service seeders if needed
-        if (vulnerabilityService.getAllVulnerabilities().isEmpty()) {
-            vulnerabilityService.triggerScan();
-        }
     }
 
     private void seedRoles() {
