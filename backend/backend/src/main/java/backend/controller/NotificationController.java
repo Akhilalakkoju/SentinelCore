@@ -55,4 +55,12 @@ public class NotificationController {
 
         return "All notifications deleted successfully.";
     }
+
+    @PostMapping("/test-webhook")
+    public String receiveTestWebhook(@RequestBody Object payload) {
+        System.out.println("========== SENTINELCORE WEBHOOK RECEIVED ==========");
+        System.out.println("Payload: " + payload);
+        System.out.println("===================================================");
+        return "Webhook received successfully";
+    }
 }

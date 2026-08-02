@@ -7,16 +7,25 @@ public class NotificationSettingsDTO {
     private Integer smtpPort;
     private String senderEmail;
     private String senderPassword;
+    private Boolean webhookEnabled;
+    private String webhookUrl;
+    private Integer notificationThrottleMinutes;
+    private Integer alertEscalationMinutes;
 
     public NotificationSettingsDTO() {
     }
 
-    public NotificationSettingsDTO(Boolean emailEnabled, String smtpHost, Integer smtpPort, String senderEmail, String senderPassword) {
+    public NotificationSettingsDTO(Boolean emailEnabled, String smtpHost, Integer smtpPort, String senderEmail, String senderPassword,
+                                   Boolean webhookEnabled, String webhookUrl, Integer notificationThrottleMinutes, Integer alertEscalationMinutes) {
         this.emailEnabled = emailEnabled;
         this.smtpHost = smtpHost;
         this.smtpPort = smtpPort;
         this.senderEmail = senderEmail;
         this.senderPassword = senderPassword;
+        this.webhookEnabled = webhookEnabled;
+        this.webhookUrl = webhookUrl;
+        this.notificationThrottleMinutes = notificationThrottleMinutes;
+        this.alertEscalationMinutes = alertEscalationMinutes;
     }
 
     public Boolean getEmailEnabled() {
@@ -57,5 +66,37 @@ public class NotificationSettingsDTO {
 
     public void setSenderPassword(String senderPassword) {
         this.senderPassword = senderPassword;
+    }
+
+    public Boolean getWebhookEnabled() {
+        return webhookEnabled;
+    }
+
+    public void setWebhookEnabled(Boolean webhookEnabled) {
+        this.webhookEnabled = webhookEnabled;
+    }
+
+    public String getWebhookUrl() {
+        return webhookUrl;
+    }
+
+    public void setWebhookUrl(String webhookUrl) {
+        this.webhookUrl = webhookUrl;
+    }
+
+    public Integer getNotificationThrottleMinutes() {
+        return notificationThrottleMinutes;
+    }
+
+    public void setNotificationThrottleMinutes(Integer notificationThrottleMinutes) {
+        this.notificationThrottleMinutes = notificationThrottleMinutes;
+    }
+
+    public Integer getAlertEscalationMinutes() {
+        return alertEscalationMinutes;
+    }
+
+    public void setAlertEscalationMinutes(Integer alertEscalationMinutes) {
+        this.alertEscalationMinutes = alertEscalationMinutes;
     }
 }

@@ -15,4 +15,6 @@ public interface AlertRepository extends JpaRepository<Alert, Long> {
 
     long countBySeverity(String severity);
 
+    List<Alert> findByStatusAndSeverityAndEscalatedFalse(String status, String severity);
+
 }

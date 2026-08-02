@@ -385,22 +385,7 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void seedNotifications() {
-        if (notificationRepository.count() == 0) {
-            Notification n1 = new Notification("Critical Security Alert", "CRITICAL",
-                    "Suspicious PowerShell Execution on WS-102 requires immediate analyst triage.",
-                    false, LocalDateTime.now().minusHours(1));
-            notificationRepository.save(n1);
-
-            Notification n2 = new Notification("SOAR Playbook Auto-Triggered", "HIGH",
-                    "Playbook Brute Force Response executed on Incident #1. Target IP blocked.",
-                    false, LocalDateTime.now().minusMinutes(30));
-            notificationRepository.save(n2);
-
-            Notification n3 = new Notification("Asset Offline Warning", "MEDIUM",
-                    "Asset DC-PROD-01 missed scheduled heartbeat check interval.",
-                    true, LocalDateTime.now().minusHours(2));
-            notificationRepository.save(n3);
-        }
+        // Disabled default mock notification seeding to prevent startup notification popups.
     }
 
     private void seedAuditLogs() {

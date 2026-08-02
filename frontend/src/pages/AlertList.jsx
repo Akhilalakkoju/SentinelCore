@@ -1,10 +1,12 @@
 
 
 import AlertAnalysisModal from "../components/AlertAnalysisModal";
+import AddAlertModal from "../components/AddAlertModal";
 import { analyzeAlert } from "../services/alertAIService";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { FaPlus } from "react-icons/fa";
 
 import api from "../services/api";
 
@@ -15,6 +17,7 @@ import AnimatedBackground from "../components/AnimatedBackground";
 import GlassCard from "../components/ui/GlassCard";
 import PageHeader from "../components/ui/PageHeader";
 import TableContainer from "../components/ui/TableContainer";
+import PrimaryButton from "../components/ui/PrimaryButton";
 
 function AlertList() {
 
@@ -26,6 +29,7 @@ function AlertList() {
     const [analysis, setAnalysis] = useState("");
     const [loadingAnalysis, setLoadingAnalysis] = useState(false);
     const [severityFilter, setSeverityFilter] = useState("All");
+    const [addModalOpen, setAddModalOpen] = useState(false);
 
     const role = localStorage.getItem("role");
     const isAdmin = role === "ADMIN";
@@ -174,7 +178,16 @@ function AlertList() {
                     <PageHeader
                         title="Alert Management"
                         subtitle="Monitor and manage security alerts"
-                    />
+                    >
+                        {canEdit && (
+                            <PrimaryButton
+                                onClick={() => setAddModalOpen(true)}
+                                className="bg-sky-600 hover:bg-sky-500 text-white flex items-center gap-2 shadow-lg shadow-sky-500/20"
+                            >
+                                <FaPlus className="text-sm" /> Add Alert
+                            </PrimaryButton>
+                        )}
+                    </PageHeader>
 
                     <GlassCard className="p-6 mb-8">
 
@@ -427,6 +440,11 @@ function AlertList() {
                     onClose={() => setAnalysisOpen(false)}
                     analysis={analysis}
                     loading={loadingAnalysis}
+                />
+                <AddAlertModal
+                    open={addModalOpen}
+                    onClose={() => setAddModalOpen(false)}
+                    onSuccess={fetchAlerts}
                 />
 
             </main>

@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { FaPlus } from "react-icons/fa";
 
 import api from "../services/api";
 
@@ -12,14 +13,17 @@ import GlassCard from "../components/ui/GlassCard";
 import PageHeader from "../components/ui/PageHeader";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import TableContainer from "../components/ui/TableContainer";
+import AddThreatModal from "../components/AddThreatModal";
 
 function ThreatList() {
 
     const navigate = useNavigate();
 
     const role = localStorage.getItem("role");
+    const canEdit = role === "ADMIN" || role === "ANALYST";
 
     const [threats, setThreats] = useState([]);
+    const [addModalOpen, setAddModalOpen] = useState(false);
 
     const [search, setSearch] = useState("");
 
@@ -239,29 +243,34 @@ function ThreatList() {
         title="Threat Management"
         subtitle="Monitor, search and manage cyber threats"
       >
+        <div className="flex gap-4">
+          {role === "ADMIN" && (
+            <>
+              <PrimaryButton
+                onClick={exportPdf}
+                className="bg-gradient-to-r from-red-600 to-red-500 text-white"
+              >
+                📄 Export PDF
+              </PrimaryButton>
 
-        {role === "ADMIN" && (
+              <PrimaryButton
+                onClick={exportExcel}
+                className="bg-gradient-to-r from-green-600 to-green-500 text-white"
+              >
+                📊 Export Excel
+              </PrimaryButton>
+            </>
+          )}
 
-          <div className="flex gap-4">
-
+          {canEdit && (
             <PrimaryButton
-              onClick={exportPdf}
-              className="bg-gradient-to-r from-red-600 to-red-500 text-white"
+              onClick={() => setAddModalOpen(true)}
+              className="bg-sky-600 hover:bg-sky-500 text-white flex items-center gap-2 shadow-lg shadow-sky-500/20"
             >
-              📄 Export PDF
+              <FaPlus className="text-sm" /> Add Threat
             </PrimaryButton>
-
-            <PrimaryButton
-              onClick={exportExcel}
-              className="bg-gradient-to-r from-green-600 to-green-500 text-white"
-            >
-              📊 Export Excel
-            </PrimaryButton>
-
-          </div>
-
-        )}
-
+          )}
+        </div>
       </PageHeader>
 
       {/* Search */}
@@ -498,6 +507,11 @@ function ThreatList() {
 
       </TableContainer>
 
+      <AddThreatModal
+        open={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        onSuccess={fetchThreats}
+      />
     </div>
 
   </main>

@@ -7,16 +7,21 @@ public class ProfileDTO {
     private String role;
     private String profileImage;
     private String theme;
+    private Boolean emailNotificationsEnabled;
+    private Boolean inAppNotificationsEnabled;
 
     public ProfileDTO() {
     }
 
-    public ProfileDTO(String name, String email, String role, String profileImage, String theme) {
+    public ProfileDTO(String name, String email, String role, String profileImage, String theme,
+                      Boolean emailNotificationsEnabled, Boolean inAppNotificationsEnabled) {
         this.name = name;
         this.email = email;
         this.role = role;
         this.profileImage = profileImage;
         this.theme = theme;
+        this.emailNotificationsEnabled = emailNotificationsEnabled;
+        this.inAppNotificationsEnabled = inAppNotificationsEnabled;
     }
 
     public String getName() {
@@ -57,5 +62,21 @@ public class ProfileDTO {
 
     public void setTheme(String theme) {
         this.theme = theme;
+    }
+
+    public Boolean getEmailNotificationsEnabled() {
+        return emailNotificationsEnabled;
+    }
+
+    public void setEmailNotificationsEnabled(Boolean emailNotificationsEnabled) {
+        this.emailNotificationsEnabled = emailNotificationsEnabled;
+    }
+
+    public Boolean getInAppNotificationsEnabled() {
+        return inAppNotificationsEnabled;
+    }
+
+    public void setInAppNotificationsEnabled(Boolean inAppNotificationsEnabled) {
+        this.inAppNotificationsEnabled = inAppNotificationsEnabled;
     }
 }

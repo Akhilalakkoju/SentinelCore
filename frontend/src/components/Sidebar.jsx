@@ -54,21 +54,9 @@ function Sidebar() {
       path: "/dashboard",
     },
     {
-      title: "Add Threat",
-      icon: <FaPlusCircle />,
-      path: "/add-threat",
-      roles: ["ADMIN", "ANALYST"],
-    },
-    {
       title: "Threat List",
       icon: <FaShieldAlt />,
       path: "/threat-list",
-    },
-    {
-      title: "Add IOC",
-      icon: <FaSearch />,
-      path: "/add-ioc",
-      roles: ["ADMIN", "ANALYST"],
     },
     {
       title: "IOC List",
@@ -76,32 +64,14 @@ function Sidebar() {
       path: "/ioc-list",
     },
     {
-      title: "Add Alert",
-      icon: <FaBell />,
-      path: "/add-alert",
-      roles: ["ADMIN", "ANALYST"],
-    },
-    {
       title: "Alert List",
       icon: <FaExclamationTriangle />,
       path: "/alert-list",
     },
     {
-      title: "Add Alert Rule",
-      icon: <FaPlusCircle />,
-      path: "/add-alert-rule",
-      roles: ["ADMIN", "ANALYST"],
-    },
-    {
       title: "Alert Rules",
       icon: <FaCog />,
       path: "/alert-rules",
-      roles: ["ADMIN", "ANALYST"],
-    },
-    {
-      title: "Test Alert Engine",
-      icon: <FaCog />,
-      path: "/test-alert-engine",
       roles: ["ADMIN", "ANALYST"],
     },
     {
