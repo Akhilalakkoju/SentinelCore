@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { FaPlus } from "react-icons/fa";
 
 import api from "../services/api";
 
@@ -11,12 +12,18 @@ import AnimatedBackground from "../components/AnimatedBackground";
 import GlassCard from "../components/ui/GlassCard";
 import PageHeader from "../components/ui/PageHeader";
 import TableContainer from "../components/ui/TableContainer";
+import PrimaryButton from "../components/ui/PrimaryButton";
+import AddIOCModal from "../components/AddIOCModal";
 
 function IOCList() {
 
     const navigate = useNavigate();
 
+    const role = localStorage.getItem("role");
+    const canEdit = role === "ADMIN" || role === "ANALYST";
+
     const [iocs, setIOCs] = useState([]);
+    const [addModalOpen, setAddModalOpen] = useState(false);
     const [search, setSearch] = useState("");
     const [riskFilter, setRiskFilter] = useState("All");
 
@@ -130,7 +137,16 @@ function IOCList() {
             <PageHeader
                 title="IOC Management"
                 subtitle="Manage Indicators of Compromise"
-            />
+            >
+                {canEdit && (
+                    <PrimaryButton
+                        onClick={() => setAddModalOpen(true)}
+                        className="bg-sky-600 hover:bg-sky-500 text-white flex items-center gap-2 shadow-lg shadow-sky-500/20"
+                    >
+                        <FaPlus className="text-sm" /> Add IOC
+                    </PrimaryButton>
+                )}
+            </PageHeader>
 
             {/* Search & Filter */}
 
@@ -352,6 +368,11 @@ function IOCList() {
 
             </TableContainer>
 
+            <AddIOCModal
+                open={addModalOpen}
+                onClose={() => setAddModalOpen(false)}
+                onSuccess={fetchIOCs}
+            />
         </div>
 
     </main>

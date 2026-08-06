@@ -27,6 +27,7 @@ import {
     FaMoon,
     FaSun,
     FaUserShield,
+    FaBell,
 } from "react-icons/fa";
 
 import { toast } from "react-hot-toast";
@@ -55,6 +56,8 @@ function Settings() {
         role: "",
         profileImage: "",
         theme: "dark",
+        emailNotificationsEnabled: true,
+        inAppNotificationsEnabled: true,
     });
 
     // Change Password State
@@ -78,6 +81,10 @@ function Settings() {
         smtpPort: 587,
         senderEmail: "admin@sentinelcore.com",
         senderPassword: "••••••••••••",
+        webhookEnabled: false,
+        webhookUrl: "",
+        notificationThrottleMinutes: 5,
+        alertEscalationMinutes: 10,
     });
 
     // Retention Settings State
@@ -143,12 +150,16 @@ function Settings() {
                 name: profile.name,
                 profileImage: profile.profileImage,
                 theme: profile.theme,
+                emailNotificationsEnabled: profile.emailNotificationsEnabled,
+                inAppNotificationsEnabled: profile.inAppNotificationsEnabled,
             });
             setProfile(updated);
             updateSettingsState({
                 theme: updated.theme,
                 userName: updated.name,
                 profileImage: updated.profileImage,
+                emailNotificationsEnabled: updated.emailNotificationsEnabled,
+                inAppNotificationsEnabled: updated.inAppNotificationsEnabled,
             });
             toast.success("Profile settings saved!");
         } catch (error) {
@@ -396,6 +407,47 @@ function Settings() {
                                                         <FaSun />
                                                         Light Mode
                                                     </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Notification Preferences */}
+                                            <div className="border-t border-slate-800 pt-6">
+                                                <h4 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                                                    <FaBell className="text-sky-400" />
+                                                    Personal Alert Delivery Preferences
+                                                </h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-2xl flex items-center justify-between">
+                                                        <div>
+                                                            <h5 className="text-sm font-semibold text-slate-200">Email Notifications</h5>
+                                                            <p className="text-xs text-slate-400 mt-0.5">Receive operational alerts via email.</p>
+                                                        </div>
+                                                        <label className="flex items-center gap-3 cursor-pointer">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={Boolean(profile.emailNotificationsEnabled)}
+                                                                onChange={(e) => setProfile({ ...profile, emailNotificationsEnabled: e.target.checked })}
+                                                                className="w-5 h-5 accent-sky-500 rounded cursor-pointer"
+                                                            />
+                                                            <span className="text-sm font-semibold text-slate-300">Enabled</span>
+                                                        </label>
+                                                    </div>
+
+                                                    <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-2xl flex items-center justify-between">
+                                                        <div>
+                                                            <h5 className="text-sm font-semibold text-slate-200">In-App Toast Alerts</h5>
+                                                            <p className="text-xs text-slate-400 mt-0.5">Receive real-time dashboard notifications.</p>
+                                                        </div>
+                                                        <label className="flex items-center gap-3 cursor-pointer">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={Boolean(profile.inAppNotificationsEnabled)}
+                                                                onChange={(e) => setProfile({ ...profile, inAppNotificationsEnabled: e.target.checked })}
+                                                                className="w-5 h-5 accent-sky-500 rounded cursor-pointer"
+                                                            />
+                                                            <span className="text-sm font-semibold text-slate-300">Enabled</span>
+                                                        </label>
+                                                    </div>
                                                 </div>
                                             </div>
 
@@ -662,6 +714,90 @@ function Settings() {
                                                         required
                                                         className="w-full bg-slate-900 border border-slate-750 focus:border-sky-500 rounded-xl px-4 py-3 text-slate-100 text-sm focus:outline-none transition-colors"
                                                     />
+                                                </div>
+                                            </div>
+
+                                            {/* Webhook Configuration Section */}
+                                            <div className="border-t border-slate-800 pt-6 mt-6">
+                                                <h4 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                                                    <FaSlidersH className="text-sky-400" />
+                                                    Outgoing Webhook Integration
+                                                </h4>
+                                                <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-2xl flex items-center justify-between mb-6">
+                                                    <div>
+                                                        <h5 className="text-sm font-semibold text-slate-200">Enable Outgoing Webhook</h5>
+                                                        <p className="text-xs text-slate-400 mt-0.5">
+                                                            Dispatch generated alert payloads to a remote server.
+                                                        </p>
+                                                    </div>
+                                                    <label className="flex items-center gap-3 cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={Boolean(notificationSettings.webhookEnabled)}
+                                                            onChange={(e) => setNotificationSettings({ ...notificationSettings, webhookEnabled: e.target.checked })}
+                                                            className="w-5 h-5 accent-sky-500 rounded"
+                                                        />
+                                                        <span className="text-sm font-semibold text-slate-200">Enabled</span>
+                                                    </label>
+                                                </div>
+
+                                                {notificationSettings.webhookEnabled && (
+                                                    <div>
+                                                        <label className="block text-sm font-semibold text-slate-300 mb-2">
+                                                            Webhook Endpoint URL
+                                                        </label>
+                                                        <input
+                                                            type="url"
+                                                            value={notificationSettings.webhookUrl || ""}
+                                                            onChange={(e) => setNotificationSettings({ ...notificationSettings, webhookUrl: e.target.value })}
+                                                            required
+                                                            placeholder="http://example.com/webhook"
+                                                            className="w-full bg-slate-900 border border-slate-750 focus:border-sky-500 rounded-xl px-4 py-3 text-slate-100 text-sm focus:outline-none transition-colors"
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Throttling & Escalation Rules Section */}
+                                            <div className="border-t border-slate-800 pt-6 mt-6">
+                                                <h4 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                                                    <FaExclamationTriangle className="text-sky-400" />
+                                                    Notification Throttling & Escalation Rules
+                                                </h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    <div>
+                                                        <label className="block text-sm font-semibold text-slate-300 mb-2">
+                                                            Alert Storm Throttling (Minutes)
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            min={0}
+                                                            value={notificationSettings.notificationThrottleMinutes || 5}
+                                                            onChange={(e) => setNotificationSettings({ ...notificationSettings, notificationThrottleMinutes: parseInt(e.target.value) || 0 })}
+                                                            required
+                                                            className="w-full bg-slate-900 border border-slate-750 focus:border-sky-500 rounded-xl px-4 py-3 text-slate-100 text-sm focus:outline-none transition-colors"
+                                                        />
+                                                        <p className="text-xs text-slate-400 mt-1">
+                                                            Deduplicate and suppress notification alerts with the same name within this window.
+                                                        </p>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-sm font-semibold text-slate-300 mb-2">
+                                                            Critical Alert Escalation (Minutes)
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            min={1}
+                                                            value={notificationSettings.alertEscalationMinutes || 10}
+                                                            onChange={(e) => setNotificationSettings({ ...notificationSettings, alertEscalationMinutes: parseInt(e.target.value) || 10 })}
+                                                            required
+                                                            className="w-full bg-slate-900 border border-slate-750 focus:border-sky-500 rounded-xl px-4 py-3 text-slate-100 text-sm focus:outline-none transition-colors"
+                                                        />
+                                                        <p className="text-xs text-slate-400 mt-1">
+                                                            Unacknowledged Critical alerts will automatically escalate to Incidents after this delay.
+                                                        </p>
+                                                    </div>
                                                 </div>
                                             </div>
 

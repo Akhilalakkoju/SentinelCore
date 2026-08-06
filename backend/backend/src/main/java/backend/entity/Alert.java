@@ -28,6 +28,9 @@ public class Alert {
     @Column(name = "last_occurred")
     private LocalDateTime lastOccurred;
 
+    @Column(name = "escalated")
+    private Boolean escalated = false;
+
     @Column(name = "email_sender")
     private String emailSender;
 
@@ -145,6 +148,14 @@ public class Alert {
 
     public void setLastOccurred(LocalDateTime lastOccurred) {
         this.lastOccurred = lastOccurred;
+    }
+
+    public Boolean getEscalated() {
+        return escalated != null ? escalated : false;
+    }
+
+    public void setEscalated(Boolean escalated) {
+        this.escalated = escalated;
     }
 
     public String getEmailSender() {

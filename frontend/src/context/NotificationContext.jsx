@@ -5,11 +5,13 @@ import {
     connectWebSocket,
     disconnectWebSocket
 } from "../services/websocket";
+import { useSettings } from "./SettingsContext";
 
 const NotificationContext = createContext();
 
 export const NotificationProvider = ({ children }) => {
 
+    const { settings } = useSettings() || {};
     const [notifications, setNotifications] = useState([]);
 
     // Load notifications from database
@@ -50,6 +52,11 @@ export const NotificationProvider = ({ children }) => {
 
             // Connect WebSocket
             connectWebSocket((alert) => {
+                if (settings?.inAppNotificationsEnabled === false) {
+                    loadNotifications();
+                    return;
+                }
+
                 toast.success(
                     <>
                         <div className="font-bold text-base">
@@ -88,7 +95,7 @@ export const NotificationProvider = ({ children }) => {
                 disconnectWebSocket();
             };
         }
-    }, []);
+    }, [settings?.inAppNotificationsEnabled]);
 
 
     const unreadCount =

@@ -34,6 +34,12 @@ public class User {
     @Column(nullable = false, columnDefinition = "VARCHAR(255) DEFAULT 'dark'")
     private String theme = "dark";
 
+    @Column(name = "email_notifications_enabled")
+    private Boolean emailNotificationsEnabled = true;
+
+    @Column(name = "in_app_notifications_enabled")
+    private Boolean inAppNotificationsEnabled = true;
+
     public User() {
     }
 
@@ -53,4 +59,8 @@ public class User {
     public void setProfileImage(String profileImage) { this.profileImage = profileImage; }
     public String getTheme() { return theme; }
     public void setTheme(String theme) { this.theme = theme; }
+    public Boolean getEmailNotificationsEnabled() { return emailNotificationsEnabled != null ? emailNotificationsEnabled : true; }
+    public void setEmailNotificationsEnabled(Boolean emailNotificationsEnabled) { this.emailNotificationsEnabled = emailNotificationsEnabled; }
+    public Boolean getInAppNotificationsEnabled() { return inAppNotificationsEnabled != null ? inAppNotificationsEnabled : true; }
+    public void setInAppNotificationsEnabled(Boolean inAppNotificationsEnabled) { this.inAppNotificationsEnabled = inAppNotificationsEnabled; }
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { FaPlus, FaFlask } from "react-icons/fa";
 
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
@@ -15,16 +16,23 @@ import {
     getAlertRules,
     deleteAlertRule,
 } from "../services/alertRuleService";
+import AddAlertRuleModal from "../components/AddAlertRuleModal";
+import TestAlertEngineModal from "../components/TestAlertEngineModal";
 
 function AlertRuleList() {
 
     const navigate = useNavigate();
+
+    const role = localStorage.getItem("role");
+    const canEdit = role === "ADMIN" || role === "ANALYST";
 
     const [rules, setRules] = useState([]);
     const [search, setSearch] = useState("");
     const [eventFilter, setEventFilter] = useState("");
     const [severityFilter, setSeverityFilter] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
+    const [addRuleModalOpen, setAddRuleModalOpen] = useState(false);
+    const [testModalOpen, setTestModalOpen] = useState(false);
 
     useEffect(() => {
         loadRules();
@@ -111,7 +119,25 @@ function AlertRuleList() {
                     <PageHeader
                         title="Alert Rules"
                         subtitle="Manage automatic alert generation rules"
-                    />
+                    >
+                        {canEdit && (
+                            <div className="flex gap-4">
+                                <PrimaryButton
+                                    onClick={() => setTestModalOpen(true)}
+                                    className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white flex items-center gap-2 hover:scale-105 transition"
+                                >
+                                    <FaFlask className="text-sm" /> Test Alert Engine
+                                </PrimaryButton>
+
+                                <PrimaryButton
+                                    onClick={() => setAddRuleModalOpen(true)}
+                                    className="bg-sky-600 hover:bg-sky-500 text-white flex items-center gap-2 shadow-lg shadow-sky-500/20"
+                                >
+                                    <FaPlus className="text-sm" /> Add Alert Rule
+                                </PrimaryButton>
+                            </div>
+                        )}
+                    </PageHeader>
 
                     <div className="flex flex-wrap items-end gap-4 mb-6">
 
@@ -330,9 +356,18 @@ function AlertRuleList() {
 
                     </GlassCard>
 
-                </div>
+            <AddAlertRuleModal
+                open={addRuleModalOpen}
+                onClose={() => setAddRuleModalOpen(false)}
+                onSuccess={loadRules}
+            />
+            <TestAlertEngineModal
+                open={testModalOpen}
+                onClose={() => setTestModalOpen(false)}
+            />
+        </div>
 
-            </main>
+    </main>
 
         </>
     );

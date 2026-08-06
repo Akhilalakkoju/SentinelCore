@@ -12,6 +12,8 @@ export function SettingsProvider({ children }) {
         userName: "",
         userEmail: "",
         profileImage: "",
+        emailNotificationsEnabled: true,
+        inAppNotificationsEnabled: true,
     });
 
     useEffect(() => {
@@ -58,6 +60,8 @@ export function SettingsProvider({ children }) {
                 userName: profData?.name || prev.userName,
                 userEmail: profData?.email || prev.userEmail,
                 profileImage: profData?.profileImage || prev.profileImage,
+                emailNotificationsEnabled: profData?.emailNotificationsEnabled !== undefined ? profData.emailNotificationsEnabled : prev.emailNotificationsEnabled,
+                inAppNotificationsEnabled: profData?.inAppNotificationsEnabled !== undefined ? profData.inAppNotificationsEnabled : prev.inAppNotificationsEnabled,
             }));
         } catch (error) {
             console.error("Error loading system settings:", error);

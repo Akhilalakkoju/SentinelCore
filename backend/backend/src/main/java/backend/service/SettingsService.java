@@ -26,6 +26,10 @@ public class SettingsService {
         seedIfMissing("SMTP_EMAIL", "admin@sentinelcore.com", "System sender email address");
         seedIfMissing("SMTP_PASSWORD", "••••••••••••", "SMTP authentication password / token");
         seedIfMissing("EMAIL_ENABLED", "true", "Enable automated email notifications");
+        seedIfMissing("WEBHOOK_ENABLED", "false", "Enable automated webhook alerts dispatch");
+        seedIfMissing("WEBHOOK_URL", "http://localhost:8080/api/notifications/test-webhook", "Webhook endpoint URL for alerts integration");
+        seedIfMissing("NOTIFICATION_THROTTLE_MINUTES", "5", "Min threshold between similar notifications to prevent alert storms");
+        seedIfMissing("ALERT_ESCALATION_MINUTES", "10", "Unacknowledged Critical alert auto-escalation duration to Incident");
         seedIfMissing("LOG_RETENTION_DAYS", "90", "System log retention duration in days");
         seedIfMissing("AUDIT_RETENTION_DAYS", "180", "Audit log retention duration in days");
         seedIfMissing("ORGANIZATION_NAME", "SentinelCore", "Organization or tenant name");
@@ -90,7 +94,11 @@ public class SettingsService {
         int port = Integer.parseInt(getValue("SMTP_PORT", "587"));
         String email = getValue("SMTP_EMAIL", "admin@sentinelcore.com");
         String password = getValue("SMTP_PASSWORD", "••••••••••••");
-        return new NotificationSettingsDTO(enabled, host, port, email, password);
+        boolean webhookEnabled = Boolean.parseBoolean(getValue("WEBHOOK_ENABLED", "false"));
+        String webhookUrl = getValue("WEBHOOK_URL", "http://localhost:8080/api/notifications/test-webhook");
+        int throttleMinutes = Integer.parseInt(getValue("NOTIFICATION_THROTTLE_MINUTES", "5"));
+        int escalationMinutes = Integer.parseInt(getValue("ALERT_ESCALATION_MINUTES", "10"));
+        return new NotificationSettingsDTO(enabled, host, port, email, password, webhookEnabled, webhookUrl, throttleMinutes, escalationMinutes);
     }
 
     public NotificationSettingsDTO updateNotificationSettings(NotificationSettingsDTO dto, String updatedBy) {
@@ -114,6 +122,10 @@ public class SettingsService {
         if (!"••••••••••••".equals(dto.getSenderPassword())) {
             setValue("SMTP_PASSWORD", dto.getSenderPassword(), updatedBy);
         }
+        setValue("WEBHOOK_ENABLED", String.valueOf(dto.getWebhookEnabled() != null && dto.getWebhookEnabled()), updatedBy);
+        setValue("WEBHOOK_URL", dto.getWebhookUrl() != null ? dto.getWebhookUrl().trim() : "", updatedBy);
+        setValue("NOTIFICATION_THROTTLE_MINUTES", String.valueOf(dto.getNotificationThrottleMinutes() != null ? dto.getNotificationThrottleMinutes() : 5), updatedBy);
+        setValue("ALERT_ESCALATION_MINUTES", String.valueOf(dto.getAlertEscalationMinutes() != null ? dto.getAlertEscalationMinutes() : 10), updatedBy);
 
         return getNotificationSettings();
     }

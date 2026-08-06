@@ -27,7 +27,9 @@ public class ProfileService {
                 user.getEmail(),
                 roleName,
                 user.getProfileImage(),
-                user.getTheme() != null ? user.getTheme() : "dark"
+                user.getTheme() != null ? user.getTheme() : "dark",
+                user.getEmailNotificationsEnabled(),
+                user.getInAppNotificationsEnabled()
         );
     }
 
@@ -45,6 +47,14 @@ public class ProfileService {
 
         if (dto.getTheme() != null && (dto.getTheme().equalsIgnoreCase("light") || dto.getTheme().equalsIgnoreCase("dark"))) {
             user.setTheme(dto.getTheme().toLowerCase());
+        }
+
+        if (dto.getEmailNotificationsEnabled() != null) {
+            user.setEmailNotificationsEnabled(dto.getEmailNotificationsEnabled());
+        }
+
+        if (dto.getInAppNotificationsEnabled() != null) {
+            user.setInAppNotificationsEnabled(dto.getInAppNotificationsEnabled());
         }
 
         userRepository.save(user);
