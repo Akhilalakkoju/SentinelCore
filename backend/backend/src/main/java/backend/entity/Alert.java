@@ -52,6 +52,18 @@ public class Alert {
     @Column(name = "verdict")
     private String verdict;
 
+    @Column(columnDefinition = "TEXT")
+    private String aiAnalysis;
+
+
+    public String getAiAnalysis() {
+        return aiAnalysis;
+    }
+
+    public void setAiAnalysis(String aiAnalysis) {
+        this.aiAnalysis = aiAnalysis;
+    }
+
     public Alert() {
     }
 

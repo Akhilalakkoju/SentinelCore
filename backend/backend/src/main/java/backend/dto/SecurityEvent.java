@@ -3,20 +3,28 @@ package backend.dto;
 public class SecurityEvent {
 
     private String eventType;
-
     private Integer value;
-
     private String source;
-
     private String description;
+
+    // IOC information
+    private String indicator;
+    private String indicatorType;
+
+    // Optional asset information
+    private String assetName;
+    private String sourceIp;
+    private String destinationIp;
 
     public SecurityEvent() {
     }
 
-    public SecurityEvent(String eventType,
-                         Integer value,
-                         String source,
-                         String description) {
+    public SecurityEvent(
+            String eventType,
+            Integer value,
+            String source,
+            String description
+    ) {
         this.eventType = eventType;
         this.value = value;
         this.source = source;
@@ -53,5 +61,45 @@ public class SecurityEvent {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getIndicator() {
+        return indicator;
+    }
+
+    public void setIndicator(String indicator) {
+        this.indicator = indicator;
+    }
+
+    public String getIndicatorType() {
+        return indicatorType;
+    }
+
+    public void setIndicatorType(String indicatorType) {
+        this.indicatorType = indicatorType;
+    }
+
+    public String getAssetName() {
+        return assetName;
+    }
+
+    public void setAssetName(String assetName) {
+        this.assetName = assetName;
+    }
+
+    public String getSourceIp() {
+        return sourceIp;
+    }
+
+    public void setSourceIp(String sourceIp) {
+        this.sourceIp = sourceIp;
+    }
+
+    public String getDestinationIp() {
+        return destinationIp;
+    }
+
+    public void setDestinationIp(String destinationIp) {
+        this.destinationIp = destinationIp;
     }
 }

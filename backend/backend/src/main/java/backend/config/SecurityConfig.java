@@ -236,6 +236,12 @@ public class SecurityConfig {
                         // ===========================
                         // Everything Else
                         // ===========================
+                        // Security Event Ingestion
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/events/ingest"
+                        )
+                        .hasAnyRole("ADMIN", "ANALYST")
                         .anyRequest()
                         .authenticated()
 

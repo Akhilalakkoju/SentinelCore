@@ -41,7 +41,7 @@ function AddAlertRule() {
 
         } catch (error) {
 
-            console.error(error);
+            console.error("Failed to create alert rule:", error);
 
             alert("Failed to Create Alert Rule");
 
@@ -75,6 +75,7 @@ function AddAlertRule() {
 
                             <FormSection>
 
+                                {/* Rule Name */}
                                 <ModernInput
                                     label="Rule Name"
                                     value={rule.name}
@@ -86,6 +87,7 @@ function AddAlertRule() {
                                     }
                                 />
 
+                                {/* Threshold */}
                                 <ModernInput
                                     label="Threshold"
                                     type="number"
@@ -98,6 +100,7 @@ function AddAlertRule() {
                                     }
                                 />
 
+                                {/* Event Type */}
                                 <ModernSelect
                                     label="Event Type"
                                     value={rule.eventType}
@@ -115,9 +118,13 @@ function AddAlertRule() {
                                         "SQL_INJECTION",
                                         "XSS",
                                         "BRUTE_FORCE",
+
+                                        // IOC Automation
+                                        "IOC_MATCH",
                                     ]}
                                 />
 
+                                {/* Condition */}
                                 <ModernSelect
                                     label="Condition"
                                     value={rule.conditionType}
@@ -134,6 +141,7 @@ function AddAlertRule() {
                                     ]}
                                 />
 
+                                {/* Severity */}
                                 <ModernSelect
                                     label="Severity"
                                     value={rule.severity}
@@ -151,23 +159,32 @@ function AddAlertRule() {
                                     ]}
                                 />
 
+                                {/* Enabled */}
                                 <ModernSelect
                                     label="Enabled"
                                     value={rule.enabled.toString()}
                                     onChange={(e) =>
                                         setRule({
                                             ...rule,
-                                            enabled: e.target.value === "true",
+                                            enabled:
+                                                e.target.value === "true",
                                         })
                                     }
                                     options={[
-                                        { value: "true", label: "Enabled" },
-                                        { value: "false", label: "Disabled" },
+                                        {
+                                            value: "true",
+                                            label: "Enabled",
+                                        },
+                                        {
+                                            value: "false",
+                                            label: "Disabled",
+                                        },
                                     ]}
                                 />
 
                             </FormSection>
 
+                            {/* Description */}
                             <div className="mt-8">
 
                                 <label className="block text-cyan-400 text-sm font-medium mb-2">
@@ -202,10 +219,13 @@ function AddAlertRule() {
 
                             </div>
 
+                            {/* Buttons */}
                             <div className="flex justify-end gap-4 mt-10">
 
                                 <PrimaryButton
-                                    onClick={() => navigate("/alert-rules")}
+                                    onClick={() =>
+                                        navigate("/alert-rules")
+                                    }
                                     className="bg-slate-700 hover:bg-slate-600 text-white"
                                 >
                                     Cancel

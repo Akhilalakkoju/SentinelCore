@@ -76,4 +76,50 @@ public class ThreatService {
                     getCurrentUser(), null);
         }
     }
-}
+
+    public Threat createThreatAutomatically(
+            String title,
+            String severity,
+            String source
+    ) {
+
+        // Prevent duplicate active threats
+        var existing =
+                threatRepository.findByTitleAndStatus(title, "Open");
+
+        if (existing.isPresent()) {
+
+            System.out.println("Threat already exists.");
+
+            return existing.get();
+
+        }
+
+        Threat threat = new Threat();
+
+        threat.setTitle(title);
+        threat.setSeverity(severity);
+        threat.setSource(source);
+        threat.setStatus("Open");
+
+        Threat saved = threatRepository.save(threat);
+
+        System.out.println("\n==============================");
+        System.out.println("THREAT CREATED AUTOMATICALLY");
+        System.out.println("ID       : " + saved.getId());
+        System.out.println("Title    : " + saved.getTitle());
+        System.out.println("Severity : " + saved.getSeverity());
+        System.out.println("Source   : " + saved.getSource());
+        System.out.println("==============================");
+
+        auditLogService.createLog(
+                "AUTO_THREAT",
+                "Automatic threat created : " + saved.getTitle(),
+                getCurrentUser(),
+                null
+        );
+
+        return saved;
+
+    }
+}

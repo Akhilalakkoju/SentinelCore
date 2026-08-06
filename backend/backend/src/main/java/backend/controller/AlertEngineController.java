@@ -1,26 +1,35 @@
 package backend.controller;
 
 import backend.dto.SecurityEvent;
-import backend.service.AlertEngineService;
+import backend.service.SecurityEventProcessingService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/alert-engine")
-@CrossOrigin(origins = "http://localhost:5173")
 public class AlertEngineController {
 
-    private final AlertEngineService alertEngineService;
+    private final SecurityEventProcessingService
+            securityEventProcessingService;
 
-    public AlertEngineController(AlertEngineService alertEngineService) {
-        this.alertEngineService = alertEngineService;
+    public AlertEngineController(
+            SecurityEventProcessingService
+                    securityEventProcessingService
+    ) {
+        this.securityEventProcessingService =
+                securityEventProcessingService;
     }
 
     @PostMapping("/process")
-    public ResponseEntity<String> processEvent(@RequestBody SecurityEvent event) {
+    public ResponseEntity<String> processEvent(
+            @RequestBody SecurityEvent event
+    ) {
 
-        alertEngineService.processEvent(event);
+        securityEventProcessingService
+                .processSecurityEvent(event);
 
-        return ResponseEntity.ok("Security event processed successfully.");
+        return ResponseEntity.ok(
+                "Security event processed successfully."
+        );
     }
 }
