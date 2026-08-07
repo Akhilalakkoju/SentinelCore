@@ -11,6 +11,8 @@ function VictimPortal() {
   const [isBlocked, setIsBlocked] = useState(false);
   const [executionInfo, setExecutionInfo] = useState(null);
   const [statusMessage, setStatusMessage] = useState("");
+  const [location, setLocation] = useState("Chennai, IN");
+  const [blockedType, setBlockedType] = useState("Brute Force");
 
   // Poll for target status every 2 seconds to reflect real-time playbook block
   useEffect(() => {
@@ -24,8 +26,13 @@ function VictimPortal() {
       const data = await playbookService.getTargetStatus(ip, email);
       if (data && data.blocked) {
         setIsBlocked(true);
+        const storedType = localStorage.getItem("blocked_type");
+        if (storedType) {
+          setBlockedType(storedType);
+        }
       } else {
         setIsBlocked(false);
+        localStorage.removeItem("blocked_type");
       }
     } catch (err) {
       console.error("Failed to fetch target status", err);
@@ -39,7 +46,25 @@ function VictimPortal() {
     setLoading(true);
     setStatusMessage("");
 
-    // Simulate failed login
+    // Check login history for anomalous location within 24 hours
+    const historyKey = `login_history_${email}`;
+    const lastLogin = localStorage.getItem(historyKey);
+    const now = new Date().getTime();
+
+    if (lastLogin) {
+      const lastLoginData = JSON.parse(lastLogin);
+      // Verify if location is different AND password is the same AND within 24 hours
+      if (lastLoginData.location !== location && lastLoginData.password === password && (now - lastLoginData.timestamp) < 24 * 60 * 60 * 1000) {
+        setStatusMessage(`🚨 IMPOSSIBLE TRAVEL DETECTED: Account ${email} logged in from ${lastLoginData.location} and now from ${location} with the same credentials within 24 hours! Triggering Automated Playbook...`);
+        await triggerUnauthorizedLogin();
+        return;
+      }
+    }
+
+    // Save login history
+    localStorage.setItem(historyKey, JSON.stringify({ location, password, timestamp: now }));
+
+    // Simulate normal failed password attempt after checking travel
     const newCount = failedAttempts + 1;
     setFailedAttempts(newCount);
 
@@ -47,7 +72,7 @@ function VictimPortal() {
       setStatusMessage(`🚨 5 Failed login attempts from IP ${ip}! Triggering SentinelCore IP Block Playbook...`);
       await triggerBruteForce();
     } else {
-      setStatusMessage(`❌ Invalid password for ${email}. Failed attempt ${newCount} of 5 from IP ${ip}.`);
+      setStatusMessage(`❌ Invalid password for ${email}. Failed attempt ${newCount} of 5 from IP ${ip}. Logged in successfully from ${location} beforehand (change location next with the SAME password to trigger travel anomaly).`);
       setLoading(false);
     }
   };
@@ -55,10 +80,29 @@ function VictimPortal() {
   const triggerBruteForce = async () => {
     setLoading(true);
     try {
+      localStorage.setItem("blocked_type", "Brute Force");
+      setBlockedType("Brute Force");
       const result = await playbookService.simulateBruteForce(ip, email);
       setExecutionInfo(result);
       setIsBlocked(true);
       setStatusMessage(`🚨 BRUTE FORCE ATTACK CONTAINED: Source IP ${ip} & Account ${email} BLOCKED by SentinelCore SOC!`);
+    } catch (err) {
+      console.error("Simulation failed", err);
+      setStatusMessage("Failed to execute playbook simulation.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const triggerUnauthorizedLogin = async () => {
+    setLoading(true);
+    try {
+      localStorage.setItem("blocked_type", "Unauthorized Login");
+      setBlockedType("Unauthorized Login");
+      const result = await playbookService.simulateUnauthorizedLogin(ip, email, location);
+      setExecutionInfo(result);
+      setIsBlocked(true);
+      setStatusMessage(`🚨 UNAUTHORIZED LOGIN DETECTED: Source IP ${ip} & Account ${email} BLOCKED by SentinelCore SOC due to anomalous login from ${location}!`);
     } catch (err) {
       console.error("Simulation failed", err);
       setStatusMessage("Failed to execute playbook simulation.");
@@ -73,8 +117,9 @@ function VictimPortal() {
       await playbookService.resetSimulation();
       setFailedAttempts(0);
       setIsBlocked(false);
+      localStorage.removeItem("blocked_type");
       setExecutionInfo(null);
-      setStatusMessage(`✅ Simulation reset. IP ${ip} unblocked successfully.`);
+      setStatusMessage(`✅ Simulation reset. IP ${ip} and user ${email} unblocked successfully.`);
     } catch (err) {
       console.error("Reset failed", err);
     } finally {
@@ -202,7 +247,7 @@ function VictimPortal() {
 
             <p style={{ color: "#d1d5db", fontSize: "15px", lineHeight: "1.6", marginBottom: "24px" }}>
               Traffic from source IP <strong style={{ color: "#ef4444", fontFamily: "monospace" }}>{ip}</strong> and target user account <strong style={{ color: "#ef4444" }}>{email}</strong> have been 
-              <strong> BLOCKED</strong> due to a detected <span style={{ color: "#ef4444", fontWeight: "bold" }}>Brute Force Attack</span>.
+              <strong> BLOCKED</strong> due to a detected <span style={{ color: "#ef4444", fontWeight: "bold" }}>{blockedType === "Brute Force" ? "Brute Force Attack" : "Anomalous Login Location / Travel Pattern"}</span>.
             </p>
 
             <div style={{
@@ -231,7 +276,9 @@ function VictimPortal() {
                 </div>
                 <div>
                   <span style={{ color: "#9ca3af" }}>Triggered Playbook:</span>
-                  <div style={{ color: "#34d399", fontWeight: "bold" }}>Brute Force Response</div>
+                  <div style={{ color: "#34d399", fontWeight: "bold" }}>
+                    {blockedType === "Brute Force" ? "Brute Force Response" : "Unauthorized Login Location Detection"}
+                  </div>
                 </div>
               </div>
             </div>
@@ -253,7 +300,7 @@ function VictimPortal() {
                 transition: "all 0.2s ease"
               }}
             >
-              {loading ? "Resetting..." : `🔄 Reset Simulation & Unblock IP (${ip})`}
+              {loading ? "Resetting..." : `🔄 Reset Simulation & Unblock Account (${email})`}
             </button>
           </div>
         ) : (
@@ -338,6 +385,28 @@ function VictimPortal() {
                 />
               </div>
 
+              <div style={{ marginBottom: "16px" }}>
+                <label style={{ display: "block", fontSize: "13px", color: "#9ca3af", marginBottom: "6px", fontWeight: "600" }}>
+                  Login Location
+                </label>
+                <input
+                  type="text"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  required
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    borderRadius: "8px",
+                    background: "#111827",
+                    border: "1px solid #374151",
+                    color: "#ffffff",
+                    fontSize: "14px",
+                    boxSizing: "border-box"
+                  }}
+                />
+              </div>
+
               <div style={{ marginBottom: "20px" }}>
                 <label style={{ display: "block", fontSize: "13px", color: "#9ca3af", marginBottom: "6px", fontWeight: "600" }}>
                   Password
@@ -399,11 +468,14 @@ function VictimPortal() {
                   marginBottom: "16px"
                 }}
               >
-                {loading ? "Authenticating..." : "Sign In (Try Wrong Password)"}
+                {loading ? "Authenticating..." : "Sign In / Simulate Login"}
               </button>
             </form>
 
             <div style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "12px",
               borderTop: "1px solid #374151",
               paddingTop: "20px",
               marginTop: "10px"
@@ -413,23 +485,44 @@ function VictimPortal() {
                 onClick={triggerBruteForce}
                 disabled={loading}
                 style={{
-                  width: "100%",
                   padding: "12px",
                   borderRadius: "8px",
                   background: "linear-gradient(135deg, #dc2626, #b91c1c)",
                   color: "#ffffff",
                   border: "none",
                   fontWeight: "700",
-                  fontSize: "14px",
+                  fontSize: "12px",
                   cursor: "pointer",
                   boxShadow: "0 4px 12px rgba(220, 38, 38, 0.4)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: "8px"
+                  gap: "4px"
                 }}
               >
-                ⚡ Simulate Brute Force Attack from IP {ip}
+                ⚡ Brute Force Simulation
+              </button>
+              <button
+                type="button"
+                onClick={triggerUnauthorizedLogin}
+                disabled={loading}
+                style={{
+                  padding: "12px",
+                  borderRadius: "8px",
+                  background: "linear-gradient(135deg, #e11d48, #be123c)",
+                  color: "#ffffff",
+                  border: "none",
+                  fontWeight: "700",
+                  fontSize: "12px",
+                  cursor: "pointer",
+                  boxShadow: "0 4px 12px rgba(225, 29, 72, 0.4)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "4px"
+                }}
+              >
+                📍 Travel Anomaly Simulation
               </button>
             </div>
           </div>

@@ -6,6 +6,7 @@ const BACKEND_URL = "http://localhost:8080";
 export default function App() {
   const [bfEmail, setBfEmail] = useState("");
   const [bfPassword, setBfPassword] = useState("");
+  const [location, setLocation] = useState("Bangalore, IN");
   const [bfMessage, setBfMessage] = useState("");
   const [bfMessageType, setBfMessageType] = useState("");
   const [failedCount, setFailedCount] = useState(0);
@@ -37,6 +38,30 @@ export default function App() {
     } catch (err) {}
   };
 
+  const handleLogout = () => {
+    setIsSuccess(false);
+    setBfEmail("");
+    setBfPassword("");
+    setBfMessage("");
+    setBfMessageType("");
+  };
+
+  const handleReset = async () => {
+    localStorage.removeItem("lastLogin");
+    setIsSuccess(false);
+    setIsBlocked(false);
+    setBfEmail("");
+    setBfPassword("");
+    setBfMessage("Simulation state reset successfully. All IPs and User Accounts unblocked.");
+    setBfMessageType("success");
+    setFailedCount(0);
+    try {
+      await axios.post(`${BACKEND_URL}/api/playbooks/reset-simulation`);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleBfSubmit = async (e) => {
     e.preventDefault();
     if (isBlocked || isSuccess) return;
@@ -45,10 +70,50 @@ export default function App() {
     const validPassword = "testing";
 
     if (bfEmail === validEmail && bfPassword === validPassword) {
-      setBfMessage("Authentication Successful.");
-      setBfMessageType("success");
-      setIsSuccess(true);
       setFailedCount(0);
+
+      // Impossible Travel Check
+      const storedLastLogin = localStorage.getItem("lastLogin");
+      if (storedLastLogin) {
+        try {
+          const lastLogin = JSON.parse(storedLastLogin);
+          if (lastLogin.location !== location) {
+            // Location is different -> Impossible Travel!
+            setIsSuccess(true);
+            setBfMessage(`Security Alert: Login from ${location} detected too quickly after login from ${lastLogin.location}. Impossible Travel signature triggered!`);
+            setBfMessageType("blocked");
+
+            const locationIps = {
+              "Bangalore, IN": "103.45.191.12",
+              "Moscow, RU": "185.220.101.5",
+              "New York, US": "198.51.100.42",
+              "London, UK": "82.165.1.1",
+              "Tokyo, JP": "210.140.10.2"
+            };
+            const currentIp = locationIps[location] || "185.220.101.5";
+
+            // Save new login to history
+            localStorage.setItem("lastLogin", JSON.stringify({ location, time: Date.now() }));
+
+            try {
+              await axios.post(
+                `${BACKEND_URL}/api/playbooks/simulate-unauthorized-login?ip=${currentIp}&username=${encodeURIComponent(bfEmail)}&location=${encodeURIComponent(location)}`
+              );
+            } catch (err) {
+              console.error(err);
+            }
+            return;
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      // Normal Login
+      setIsSuccess(true);
+      localStorage.setItem("lastLogin", JSON.stringify({ location, time: Date.now() }));
+      setBfMessage(`Authentication Successful. Logged in from ${location}.`);
+      setBfMessageType("success");
     } else {
       const newFailedCount = failedCount + 1;
       setFailedCount(newFailedCount);
@@ -81,10 +146,10 @@ export default function App() {
         
         <form onSubmit={handleBfSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-[#374151] mb-1">Username:</label>
+            <label className="block text-sm font-semibold text-[#374151] mb-1">Email:</label>
             <input
               type="email"
-              placeholder="Enter your username"
+              placeholder="Enter your email address"
               value={bfEmail}
               onChange={(e) => setBfEmail(e.target.value)}
               disabled={isBlocked || isSuccess}
@@ -106,6 +171,22 @@ export default function App() {
             />
           </div>
 
+          <div>
+            <label className="block text-sm font-semibold text-[#374151] mb-1">Login Location:</label>
+            <select
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              disabled={isBlocked || isSuccess}
+              className="w-full px-3.5 py-2 border border-[#d1d5db] rounded outline-none focus:border-[#3b82f6] text-sm bg-white"
+            >
+              <option value="Bangalore, IN">Bangalore, IN</option>
+              <option value="Moscow, RU">Moscow, RU</option>
+              <option value="New York, US">New York, US</option>
+              <option value="London, UK">London, UK</option>
+              <option value="Tokyo, JP">Tokyo, JP</option>
+            </select>
+          </div>
+
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -125,6 +206,24 @@ export default function App() {
             }`}
           >
             {isSuccess ? "Session Authenticated" : "Login"}
+          </button>
+
+          {isSuccess && (
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="w-full mt-3 py-2.5 bg-[#dc3545] hover:bg-[#bd2130] text-white font-semibold rounded text-sm transition cursor-pointer"
+            >
+              Logout
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={handleReset}
+            className="w-full mt-2 py-2 bg-slate-500 hover:bg-slate-600 text-white font-semibold rounded text-sm transition cursor-pointer"
+          >
+            Reset Simulator
           </button>
         </form>
 

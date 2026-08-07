@@ -84,9 +84,28 @@ public class AuthService {
             throw new RuntimeException("Email already registered");
         }
 
-        // Assign default role
-        Role role = roleRepository.findByName("ANALYST")
-                .orElseThrow(() -> new RuntimeException("Role not found"));
+        // Resolve requested role name (default to ANALYST)
+        String reqRole = request.getRoleName();
+        if (reqRole == null || reqRole.trim().isEmpty()) {
+            reqRole = "ANALYST";
+        }
+        reqRole = reqRole.trim().toUpperCase();
+
+        // Verify secret passwords for privileged roles
+        if ("ADMIN".equals(reqRole)) {
+            if (request.getSecretPassword() == null || !request.getSecretPassword().equals("Admin@only")) {
+                throw new RuntimeException("Invalid secret password for Admin registration.");
+            }
+        } else if ("ANALYST".equals(reqRole)) {
+            if (request.getSecretPassword() == null || !request.getSecretPassword().equals("Analyst@only")) {
+                throw new RuntimeException("Invalid secret password for Analyst registration.");
+            }
+        }
+
+        // Assign resolved role
+        final String finalRoleName = reqRole;
+        Role role = roleRepository.findByName(finalRoleName)
+                .orElseThrow(() -> new RuntimeException("Role " + finalRoleName + " not found"));
 
         User user = new User();
 
@@ -98,7 +117,7 @@ public class AuthService {
 
         User saved = userRepository.save(user);
 
-        auditLogService.createLog("REGISTER", "New analyst account created: " + saved.getEmail(), saved, null);
+        auditLogService.createLog("REGISTER", "New " + reqRole.toLowerCase() + " account created: " + saved.getEmail(), saved, null);
 
         return "Registration Successful";
     }

@@ -91,7 +91,7 @@ function ReportHistory({ reports, onRefreshHistory }) {
         );
       case "IN_PROGRESS":
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#00D4FF]/10 text-[#00D4FF] border border-[#00D4FF]/20">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20">
             <FaSpinner className="animate-spin" /> Generating
           </span>
         );
@@ -105,10 +105,10 @@ function ReportHistory({ reports, onRefreshHistory }) {
   };
 
   return (
-    <div className="bg-[#111B2E] rounded-[24px] border border-white/5 shadow-[0_20px_50px_rgba(0,0,0,0.45)] overflow-hidden animate-fade-in">
+    <div className="bg-slate-900 rounded-[24px] border border-slate-800 shadow-[0_20px_50px_rgba(0,0,0,0.45)] overflow-hidden animate-fade-in">
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-white/8 text-left text-sm">
-          <thead className="bg-[#15223b]/30 text-xs font-bold text-[#94A3B8] uppercase tracking-wider">
+        <table className="min-w-full divide-y divide-slate-800 text-left text-sm">
+          <thead className="bg-slate-950/40 text-xs font-bold text-slate-400 uppercase tracking-wider">
             <tr>
               <th className="px-8 py-4">Report Name</th>
               <th className="px-8 py-4">Report Type</th>
@@ -119,26 +119,26 @@ function ReportHistory({ reports, onRefreshHistory }) {
               <th className="px-8 py-4 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/8 text-white">
+          <tbody className="divide-y divide-slate-800 text-white">
             {reports.map((report) => (
-              <tr key={report.id} className="hover:bg-white/[0.02] transition-colors duration-200">
+              <tr key={report.id} className="hover:bg-slate-800/40 transition-colors duration-200">
                 <td className="px-8 py-5 font-bold text-white">
                   {report.name}
                 </td>
-                <td className="px-8 py-5 capitalize text-[#94A3B8]">{report.reportType}</td>
+                <td className="px-8 py-5 capitalize text-slate-400">{report.reportType}</td>
                 <td className="px-8 py-5">{renderStatus(report.status)}</td>
-                <td className="px-8 py-5 text-[#94A3B8]">
+                <td className="px-8 py-5 text-slate-400">
                   {new Date(report.generatedTime).toLocaleString()}
                 </td>
-                <td className="px-8 py-5 text-[#94A3B8]">{report.generatedBy}</td>
-                <td className="px-8 py-5 text-[#94A3B8]">{formatSize(report.fileSize)}</td>
+                <td className="px-8 py-5 text-slate-400">{report.generatedBy}</td>
+                <td className="px-8 py-5 text-slate-400">{formatSize(report.fileSize)}</td>
                 <td className="px-8 py-5 text-right space-x-2">
                   {report.status === "COMPLETED" ? (
                     <>
                       <button
                         onClick={() => handlePreview(report.id, report.name)}
                         title="Preview PDF"
-                        className="p-2.5 text-[#94A3B8] hover:text-[#00D4FF] hover:bg-white/5 rounded-xl border border-transparent hover:border-white/5 transition-all duration-200"
+                        className="p-2.5 text-slate-400 hover:text-sky-400 hover:bg-slate-800/50 rounded-xl border border-transparent hover:border-slate-800 transition-all duration-200"
                       >
                         <FaEye size={14} />
                       </button>
@@ -146,7 +146,7 @@ function ReportHistory({ reports, onRefreshHistory }) {
                         onClick={() => handleDownload(report.id, report.name)}
                         title="Download PDF"
                         disabled={downloadingId === report.id}
-                        className="p-2.5 text-[#94A3B8] hover:text-[#10B981] hover:bg-white/5 rounded-xl border border-transparent hover:border-white/5 transition-all duration-200 disabled:opacity-50"
+                        className="p-2.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-800/50 rounded-xl border border-transparent hover:border-slate-800 transition-all duration-200 disabled:opacity-50"
                       >
                         {downloadingId === report.id ? (
                           <FaSpinner className="animate-spin" size={14} />
@@ -157,20 +157,20 @@ function ReportHistory({ reports, onRefreshHistory }) {
                       <button
                         onClick={() => triggerEmail(report.id, report.name)}
                         title="Email PDF"
-                        className="p-2.5 text-[#94A3B8] hover:text-[#22D3EE] hover:bg-white/5 rounded-xl border border-transparent hover:border-white/5 transition-all duration-200"
+                        className="p-2.5 text-slate-400 hover:text-cyan-400 hover:bg-slate-800/50 rounded-xl border border-transparent hover:border-slate-800 transition-all duration-200"
                       >
                         <FaEnvelope size={14} />
                       </button>
                     </>
                   ) : (
-                    <span className="text-xs text-[#94A3B8] italic">Processing</span>
+                    <span className="text-xs text-slate-400 italic">Processing</span>
                   )}
                 </td>
               </tr>
             ))}
             {reports.length === 0 && (
               <tr>
-                <td colSpan="7" className="px-8 py-12 text-center text-[#94A3B8]">
+                <td colSpan="7" className="px-8 py-12 text-center text-slate-400">
                   No compiled reports found in your database history.
                 </td>
               </tr>

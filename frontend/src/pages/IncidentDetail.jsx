@@ -96,7 +96,7 @@ function IncidentDetail() {
   const isNecessaryIncident = (playbookName) => {
     if (!playbookName) return false;
     const name = playbookName.toLowerCase();
-    return name.includes("brute force") || name.includes("malware") || name.includes("privilege") || name.includes("phishing");
+    return name.includes("brute force") || name.includes("malware") || name.includes("privilege") || name.includes("phishing") || name.includes("unauthorized") || name.includes("login") || name.includes("location");
   };
 
   const role = localStorage.getItem("role");
@@ -424,7 +424,7 @@ function IncidentDetail() {
 
                             {isNecessaryIncident(exec.playbookName) && (
                               <button
-                                disabled={releasedIds.has(exec.id)}
+                                disabled={releasedIds.has(exec.id) || !canWrite}
                                 onClick={async (e) => {
                                   e.stopPropagation();
                                   try {
@@ -435,11 +435,11 @@ function IncidentDetail() {
                                   }
                                 }}
                                 className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-all duration-300 outline-none cursor-pointer ${
-                                  releasedIds.has(exec.id)
+                                  releasedIds.has(exec.id) || !canWrite
                                     ? "bg-slate-800/80 text-slate-500 border border-slate-700/60 cursor-not-allowed"
                                     : "bg-emerald-500/10 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/20"
                                 }`}
-                                title={releasedIds.has(exec.id) ? "Block already released" : "Release IP & User Account Block"}
+                                title={releasedIds.has(exec.id) ? "Block already released" : !canWrite ? "Unauthorized to release block" : "Release IP & User Account Block"}
                               >
                                 {releasedIds.has(exec.id) ? "Released" : "Release Block"}
                               </button>

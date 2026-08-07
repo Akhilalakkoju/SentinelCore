@@ -120,6 +120,14 @@ public class PlaybookController {
         return playbookService.simulateBruteForceAttack(ip, username);
     }
 
+    @PostMapping("/simulate-unauthorized-login")
+    public PlaybookExecutionDto simulateUnauthorizedLogin(
+            @RequestParam(required = false) String ip,
+            @RequestParam(required = false) String username,
+            @RequestParam(required = false) String location) {
+        return playbookService.simulateUnauthorizedLogin(ip, username, location);
+    }
+
     @GetMapping("/target-status")
     public Map<String, Object> getTargetStatus(
             @RequestParam(required = false) String ip,

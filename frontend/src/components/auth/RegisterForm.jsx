@@ -6,10 +6,14 @@ function RegisterForm({
     email,
     password,
     confirmPassword,
+    roleName,
+    secretPassword,
     setName,
     setEmail,
     setPassword,
     setConfirmPassword,
+    setRoleName,
+    setSecretPassword,
     handleRegister,
     loading = false,
 }) {
@@ -100,6 +104,40 @@ function RegisterForm({
                         />
 
                     </div>
+
+                    {/* Role Selection */}
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                            Select Role
+                        </label>
+                        <select
+                            value={roleName}
+                            onChange={(e) => setRoleName(e.target.value)}
+                            className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none bg-white text-slate-800"
+                            required
+                        >
+                            <option value="VIEWER">Viewer</option>
+                            <option value="ANALYST">Analyst</option>
+                            <option value="ADMIN">Admin</option>
+                        </select>
+                    </div>
+
+                    {/* Secret Password for Admin/Analyst */}
+                    {(roleName === "ADMIN" || roleName === "ANALYST") && (
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">
+                                Role Secret Key
+                            </label>
+                            <input
+                                type="password"
+                                value={secretPassword}
+                                onChange={(e) => setSecretPassword(e.target.value)}
+                                placeholder={`Enter ${roleName.toLowerCase()} secret key`}
+                                className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none"
+                                required
+                            />
+                        </div>
+                    )}
 
                     <button
                         type="submit"
