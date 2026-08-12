@@ -52,6 +52,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/assets/register").permitAll()
                         .requestMatchers("/api/assets/heartbeat").permitAll()
                         .requestMatchers("/api/playbooks/simulate-brute-force").permitAll()
+                        .requestMatchers("/api/playbooks/simulate-unauthorized-login").permitAll()
                         .requestMatchers("/api/playbooks/target-status").permitAll()
                         .requestMatchers("/api/playbooks/reset-simulation").permitAll()
                         .requestMatchers("/api/playbooks/simulate-phishing").permitAll()

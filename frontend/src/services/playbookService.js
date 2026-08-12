@@ -92,6 +92,12 @@ const playbookService = {
     return response.data;
   },
 
+  // Simulate Unauthorized Login Attack on Target Portal
+  simulateUnauthorizedLogin: async (ip = "185.220.101.5", username = "admin@acme.com", location = "Moscow, RU") => {
+    const response = await api.post(`/playbooks/simulate-unauthorized-login?ip=${encodeURIComponent(ip)}&username=${encodeURIComponent(username)}&location=${encodeURIComponent(location)}`);
+    return response.data;
+  },
+
   // Check if target is blocked by SentinelCore Playbook
   getTargetStatus: async (ip = "192.168.1.105", username = "admin@acme.com") => {
     const response = await api.get(`/playbooks/target-status?ip=${encodeURIComponent(ip)}&username=${encodeURIComponent(username)}`);

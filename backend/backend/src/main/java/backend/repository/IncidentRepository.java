@@ -13,7 +13,7 @@ public interface IncidentRepository extends JpaRepository<Incident, Long> {
     List<Incident> findByAssetId(Long assetId);
     long countByStatus(String status);
     long countBySeverity(String severity);
-    Optional<Incident> findByTitle(String title);
+    List<Incident> findByTitle(String title);
     List<Incident> findByAssignedToId(Long userId);
 }
 

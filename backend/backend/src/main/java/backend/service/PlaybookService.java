@@ -1142,9 +1142,17 @@ public class PlaybookService {
                         case "BLOCK_IP":
                                 writeExecutionLog(execution, step.getName(), "RUNNING", "INFO",
                                                 "Sending command block to PaloAlto Firewall API...");
-                                blockedIps.add("192.168.1.105");
+                                String ipToBlock = "192.168.1.105";
+                                if (execution.getIncident() != null && execution.getIncident().getDescription() != null) {
+                                        java.util.regex.Matcher ipMatcher = java.util.regex.Pattern.compile("\\b(?:[0-9]{1,3}\\.){3}[0-9]{1,3}\\b")
+                                                .matcher(execution.getIncident().getDescription());
+                                        if (ipMatcher.find()) {
+                                                ipToBlock = ipMatcher.group();
+                                        }
+                                }
+                                blockedIps.add(ipToBlock);
                                 writeExecutionLog(execution, step.getName(), "RUNNING", "INFO",
-                                                "Successfully added firewall entry: Drop traffic from source IP 192.168.1.105 indefinitely.");
+                                                "Successfully added firewall entry: Drop traffic from source IP " + ipToBlock + " indefinitely.");
                                 break;
                         case "ISOLATE_HOST":
                                 writeExecutionLog(execution, step.getName(), "RUNNING", "INFO",
@@ -1155,11 +1163,20 @@ public class PlaybookService {
                         case "DISABLE_USER":
                                 writeExecutionLog(execution, step.getName(), "RUNNING", "INFO",
                                                 "Interfacing Active Directory / LDAP Service...");
-                                lockedUsers.add("admin@acme.com");
-                                lockedUsers.add("admin");
-                                lockedUsers.add("admin@sentinelcore.com");
+                                String userToLock = "admin@acme.com";
+                                if (execution.getIncident() != null && execution.getIncident().getDescription() != null) {
+                                        java.util.regex.Matcher emailMatcher = java.util.regex.Pattern.compile("user '(.*?)'|user login for '(.*?)'")
+                                                .matcher(execution.getIncident().getDescription());
+                                        if (emailMatcher.find()) {
+                                                userToLock = emailMatcher.group(1) != null ? emailMatcher.group(1) : emailMatcher.group(2);
+                                        }
+                                }
+                                lockedUsers.add(userToLock);
+                                if (userToLock.contains("@")) {
+                                        lockedUsers.add(userToLock.split("@")[0]);
+                                }
                                 writeExecutionLog(execution, step.getName(), "RUNNING", "INFO",
-                                                "Deactivated user account admin@acme.com. Access token keys invalidated.");
+                                                "Deactivated user account " + userToLock + ". Access token keys invalidated.");
                                 break;
                                 case "SCAN_VULNERABILITY":
                                 writeExecutionLog(execution, step.getName(), "RUNNING", "INFO",
@@ -2399,6 +2416,45 @@ public class PlaybookService {
                                 });
 
                 return triggerPlaybook(bruteForcePlaybook.getId(), incident.getId(), null);
+        }
+
+        @Transactional
+        public PlaybookExecutionDto simulateUnauthorizedLogin(String ip, String username, String location) {
+                String targetIp = (ip != null && !ip.isBlank()) ? ip : "185.220.101.5";
+                String targetUser = (username != null && !username.isBlank()) ? username : "test@gmail.com";
+                String targetLoc = (location != null && !location.isBlank()) ? location : "Moscow, RU";
+
+                // Add to blocked sets immediately so target portal locks
+                blockedIps.add(targetIp);
+                lockedUsers.add(targetUser);
+
+                Incident incident = Incident.builder()
+                                .title("Unauthorized Login Location Detected")
+                                .description(String.format("Detected successful user login for '%s' from anomalous location (%s - IP %s), violating geo-fencing policy.",
+                                                targetUser, targetLoc, targetIp))
+                                .severity("High")
+                                .status("Open")
+                                .source("GeoIP Security Guard")
+                                .build();
+                incident = incidentRepository.save(incident);
+
+                seedUnauthorizedLoginLocationPlaybook();
+
+                Playbook locationPlaybook = playbookRepository.findByName("Unauthorized Login Location Detection")
+                                .orElseThrow(() -> new RuntimeException("Unauthorized Login Location Detection playbook not found"));
+
+                PlaybookExecutionDto execution = triggerPlaybook(locationPlaybook.getId(), incident.getId(), null, true);
+
+                if (notificationService != null) {
+                        notificationService.saveNotification(
+                                "Unauthorized Login Alert",
+                                "High",
+                                String.format("Automated playbook 'Unauthorized Login Location Detection' triggered for user '%s' from anomalous location '%s'. Account temporarily suspended.", 
+                                                targetUser, targetLoc)
+                        );
+                }
+
+                return execution;
         }
 
         public Map<String, Object> getTargetSimulationStatus(String ip, String username) {

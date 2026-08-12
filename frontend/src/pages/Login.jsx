@@ -8,6 +8,24 @@ import AnimatedBackground from "../components/AnimatedBackground";
 import { toast } from "react-hot-toast";
 
 
+const authToastConfig = {
+  position: "top-center",
+  duration: 5000,
+  style: {
+    background: "#0f172a",
+    color: "#ffffff",
+    border: "2px solid #334155",
+    padding: "20px 36px",
+    borderRadius: "16px",
+    fontSize: "16px",
+    fontWeight: "700",
+    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.7)",
+    maxWidth: "500px",
+    textAlign: "center",
+    backdropFilter: "blur(12px)",
+  }
+};
+
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,13 +37,13 @@ function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) {
-      toast.error("Please enter email and password");
+      toast.error("Please enter email and password", authToastConfig);
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      toast.error("Please enter a valid email address");
+      toast.error("Please enter a valid email address", authToastConfig);
       return;
     }
 
@@ -37,18 +55,19 @@ function Login() {
       });
 
       if (!response.data.token) {
-        toast.error(response.data.message || "Invalid login response");
+        toast.error(response.data.message || "Invalid login response", authToastConfig);
         setIsLoading(false);
         return;
       }
 
+      // Store credentials
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("refreshToken", response.data.refreshToken);
       localStorage.setItem("email", response.data.email);
       localStorage.setItem("role", response.data.role);
       localStorage.setItem("isLoggedIn", "true");
 
-      toast.success(response.data.message || "Login Successful");
+      toast.success(response.data.message || "Login Successful", authToastConfig);
 
       navigate("/dashboard");
     } catch (error) {
@@ -65,7 +84,7 @@ function Login() {
         errorMessage = error.message;
       }
 
-      toast.error(errorMessage);
+      toast.error(errorMessage, authToastConfig);
     } finally {
       setIsLoading(false);
     }
