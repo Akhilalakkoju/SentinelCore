@@ -19,3 +19,8 @@ The backend enforces these permissions for every API request, while the frontend
 Completed: backend and frontend foundation, PostgreSQL, registration/login, JWT authentication, protected routes, user CRUD, role management, dashboard navigation, and Admin/Analyst/Viewer authorization.
 
 Planned: refresh tokens, MFA, team management, and Docker Compose for PostgreSQL, MongoDB, Redis, and Kafka.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](file:///c:/Users/USER/Downloads/SentinelCore/LICENSE) file for details.
+
